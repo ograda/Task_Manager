@@ -1,15 +1,11 @@
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout
+
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout, QMenu
 from PySide6.QtCore import Qt, QPoint
 import os
-from config import load_config, save_current_config
-from ui_components import create_menu, create_main_window, create_group
-from event_handlers import start_drag, do_drag, on_closing, bind_right_click_to_create_group
-
-def update_coordinates(event, label):
-    x = event.x_root
-    y = event.y_root
-    label.config(text=f"X: {x}, Y: {y}")
-
+from config import load_settings, save_current_settings
+from ui_components import create_menu, create_main_window, create_group, apply_groups_and_tasks
+from event_handlers import start_drag, do_drag, on_closing, bind_right_click_to_create_group, toggle_always_on_top, close_event_handler
+from data_manager import load_groups_and_tasks
 
 class MyMainWindow(QMainWindow):
     def __init__(self):
@@ -21,7 +17,7 @@ class MyMainWindow(QMainWindow):
         self.create_custom_title_bar()
 
     def create_custom_title_bar(self):
-        # Code to create custom title bar...
+        # Custom title bar setup (placeholder)
         pass
 
     def mousePressEvent(self, event):
@@ -41,27 +37,63 @@ class MyMainWindow(QMainWindow):
             event.accept()
 
 def main():
-    config = load_config()
-    icon_path = os.path.join('assets', 'task_manager_icon.ico')  # Adjust the path as needed
 
-    # Create the main window
     app = QApplication([])
-    root = QMainWindow()
 
     root = MyMainWindow()
+    # Setup event handlers
+    root.closeEvent = lambda event: close_event_handler(event, root, settings)
+
+    # Load configuration
+    settings = load_settings()
+
+     # Apply settings
+    always_on_top = settings.get("always_on_top", True)
+    toggle_always_on_top(root, always_on_top)
+
+
+    fullscreen = settings.get("fullscreen", False)
+    minimize_to_tray = settings.get("minimize_to_tray", False)
+    last_geometry = settings.get("window_geometry", "400x300")
+
+    # Create the main window
+    create_main_window(root, settings, fullscreen, always_on_top)
+
+    # Set up the menu
+    create_menu(root, fullscreen, always_on_top, minimize_to_tray, last_geometry, settings)
+
+    # Apply saved groups and tasks
+    apply_groups_and_tasks(root)
+
+    root.show()
+
+    app.exec()
+
+if __name__ == "__main__":
+    main()
+
+#def main():
+ #   config = load_config()
+  
+
+    # Create the main window
+ #   app = QApplication([])
+ #   root = QMainWindow()
+
+  #  root = MyMainWindow()
 
      # load config variables, or set default values -- move this elsewhere
-    fullscreen = config.get("fullscreen", False)
-    always_on_top = config.get("always_on_top", True)
-    minimize_to_tray = config.get("minimize_to_tray", False)
-    last_geometry = ""  # Variable to store the last geometry
+  #  fullscreen = config.get("fullscreen", False)
+  #  always_on_top = config.get("always_on_top", True)
+  #  minimize_to_tray = config.get("minimize_to_tray", False)
+  # last_geometry = ""  # Variable to store the last geometry
 
-    create_main_window(root, icon_path, config, fullscreen, always_on_top)
+ #   create_main_window(root, icon_path, config, fullscreen, always_on_top)
     
 
     #root.bind("<Button-1>", start_drag)
     #root.bind("<B1-Motion>", do_drag)
-    create_menu(root, fullscreen, always_on_top, minimize_to_tray, last_geometry)
+  #  create_menu(root, fullscreen, always_on_top, minimize_to_tray, last_geometry)
 
     # Ensure taskbar icon shows correctly
     #root.after(10, lambda: root.iconify())
@@ -77,24 +109,21 @@ def main():
    # root.bind("<Configure>", lambda e: save_current_config(root))
 
  # Assuming root is your QMainWindow
-    central_widget = QWidget()  # Create a central widget
-    root.setCentralWidget(central_widget)  # Set it as the central widget of the main window
+   # central_widget = QWidget()  # Create a central widget
+   # root.setCentralWidget(central_widget)  # Set it as the central widget of the main window
 
     # Create a vertical layout
-    layout = QVBoxLayout(central_widget)
+   # layout = QVBoxLayout(central_widget)
 
     # Create a QLabel
-    label = QLabel(text="X: 0, Y: 0")
+  #  label = QLabel(text="X: 0, Y: 0")
 
    # Add padding by setting margins or using a wrapper layout
-    layout.addWidget(label)
-    layout.setContentsMargins(0, 20, 0, 0)  # Top padding of 20px
+  #  layout.addWidget(label)
+   # layout.setContentsMargins(0, 20, 0, 0)  # Top padding of 20px
 
     #root.bind('<Motion>', lambda event: update_coordinates(event, label))
 
-    root.show()
-    app.exec()
+
     #root.mainloop()
 
-if __name__ == "__main__":
-    main()
