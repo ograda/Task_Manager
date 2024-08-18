@@ -15,8 +15,8 @@ def save_config(config):
 
 def save_current_config(root):
     config = {
-        'window_geometry': root.winfo_geometry(),
-        'always_on_top': root.attributes("-topmost"),
+        'window_geometry': root.geometry(),
+        'always_on_top': root.windowFlags() & Qt.WindowStaysOnTopHint,
         'minimize_to_tray': False,  # Example; adjust as needed
         'fullscreen': False,  # Example; adjust as needed
     }

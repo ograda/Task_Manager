@@ -1,44 +1,71 @@
-import tkinter as tk
+from PySide6.QtWidgets import QApplication, QMainWindow
 from tray import minimize_to_tray_function
 from config import save_current_config
 from tkcalendar import Calendar
+import ctypes
+from screeninfo import get_monitors
 
 x_offset = 0
 y_offset = 0
 
+#get the monitor containing the window
+def get_monitor_containing_window(x, y):
+    monitors = get_monitors()
+    for monitor in monitors:
+        if (monitor.x <= x <= monitor.x + monitor.width) and (monitor.y <= y <= monitor.y + monitor.height):
+            return monitor
+    return monitors[0]  # Default to the first monitor if none are found
+
+#get the taskbar height
+def get_taskbar_height():
+    user32 = ctypes.windll.user32
+    work_area = ctypes.wintypes.RECT()
+    user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(work_area), 0)
+    return user32.GetSystemMetrics(1) - work_area.bottom
+
+#start dragging an part of the window
 def start_drag(event):
     global x_offset, y_offset
     x_offset = event.x
     y_offset = event.y
 
+#execute the drag
 def do_drag(event):
-    widget = event.widget
-    if isinstance(widget, tk.Tk):  # Ensure we're only trying to move the main window
+    #widget = event.widget
+    widget = event.widget.winfo_toplevel()
+    #check if the widget is the main window
+    if isinstance(widget, tk.Tk): 
         x = event.x_root - x_offset
         y = event.y_root - y_offset
 
-        # Snap to screen edges if close enough
-        screen_width = widget.winfo_screenwidth()
-        screen_height = widget.winfo_screenheight()
-
-        snap_margin = 20  # Pixels to consider for snapping
+        # get the window width and height and taskbar height
         window_width = widget.winfo_width()
         window_height = widget.winfo_height()
+        taskbar_height = get_taskbar_height()
 
-        if abs(x) < snap_margin:
-            x = 0
-        elif abs(x + window_width - screen_width) < snap_margin:
-            x = screen_width - window_width
+        #get monitor information and set the snap margin and offset
+        monitor = get_monitor_containing_window(x, y)
+        snap_margin = 50  # Pixels to consider for snapping
 
-        if abs(y) < snap_margin:
-            y = 0
-        elif abs(y + window_height - screen_height) < snap_margin:
-            y = screen_height - window_height
+        # Snap to screen edges if close enough
+        if abs(x - monitor.x) < snap_margin: # Snap LEFT (WIDTH--)
+            x = monitor.x
+
+        if abs((x + window_width) - (monitor.x + monitor.width)) < snap_margin: # Snap RIGHT (WIDTH++)
+            x = (monitor.x + monitor.width) - window_width
+
+        if abs(y - monitor.y) < snap_margin: # Snap TOP (HEIGHT--)
+            y = monitor.y
+        
+        if abs((y + window_height) - (monitor.y + monitor.height - taskbar_height)) < snap_margin: # Snap BOTTOM (HEIGHT++) - some offset needed?
+            y = (monitor.y + monitor.height) - window_height - taskbar_height
 
         widget.geometry(f"+{x}+{y}")
 
+
+
 def bind_right_click_to_create_group(root, create_group_function):
-    root.bind("<Button-3>", create_group_function)       
+    root.connect("<Button-3>", create_group_function)       
 
 def on_closing(root, minimize_to_tray):
     if minimize_to_tray.get():
@@ -52,14 +79,14 @@ def open_settings(root, always_on_top, minimize_to_tray):
     settings_window.title("Settings")
     settings_window.geometry("300x200")
 
-    tk.Checkbutton(settings_window, text="Always on Top", variable=always_on_top,
-                   command=lambda: toggle_always_on_top(root, always_on_top)).pack(anchor="w", padx=20, pady=5)
+ #   tk.Checkbutton(settings_window, text="Always on Top", variable=always_on_top,
+ #                  command=lambda: toggle_always_on_top(root, always_on_top)).pack(anchor="w", padx=20, pady=5)
     
-    tk.Checkbutton(settings_window, text="Minimize to Tray", variable=minimize_to_tray).pack(anchor="w", padx=20, pady=5)
+#    tk.Checkbutton(settings_window, text="Minimize to Tray", variable=minimize_to_tray).pack(anchor="w", padx=20, pady=5)
 
-    tk.Label(settings_window, text="Additional Settings:").pack(anchor="w", padx=20, pady=10)
+ #   tk.Label(settings_window, text="Additional Settings:").pack(anchor="w", padx=20, pady=10)
     
-    tk.Label(settings_window, text="(Add more settings here)").pack(anchor="w", padx=20, pady=5)
+  #  tk.Label(settings_window, text="(Add more settings here)").pack(anchor="w", padx=20, pady=5)
 
 def toggle_fullscreen(root, fullscreen, last_geometry):
     if fullscreen.get():
