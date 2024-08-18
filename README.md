@@ -7,25 +7,31 @@ Also a heap map of ativities to track daily routine and gamify the process (sepa
 
 ## Features
 
-- **Blank Window**: A basic window is set up using Tkinter.
-- **Close Application**: A button to close/minimize the application.
-- **Menu**: added a top menu to open an options window with some basic functionalities
-- **Ovelay**: The application has the option to stay always on top
-- **[BUGGED]** **Move and Resize**: The application has a module to move and resize 
-- **[BUGGED]** **tOGGELE FULLSCREEN**: The application resize to the hole screen (not native full screen) and back to the original size - only works on first monitor
+- **[BUGGE/PARTIALLY]** **save settingss**: save and load settings on close/open application
+- **[INPROGRESS]** **groups and subtasks**: working flawless groups and subtasks (v2)
+- **Help**: created help info on menu
+- **added groups and subtasks**: Added a basic group and tasks system.
 - **[TODO]** **DBCONNECTION**: placeholder
 - **Calendar**: working calendar - library
 - **Minimize to tray**: added a minimize to tray functionality instead of closing application on close menu
-- **[MISSING]** **added groups and subtasks**: Added a basic group and tasks system. - remove task missing
+- **Toggle fullscreen**: The application resize to the hole screen (not native full screen) and back to the original size - only works on first monitor
+- **Ovelay**: The application has the option to stay always on top
+- **[REVIEW]** **Move and Resize**: The application has a module to move and resize 
+- **Menu**: added a top menu to open an options window with some basic functionalities
+- **Close Application**: A button to close/minimize the application.
+- **Blank Window**: A basic window is set up using Tkinter.
 
 
 ## Known Bugs and TODO functions
 
-- [BUG] Move and Resize + snap screen adaptation
-- [BUG] Toggle fullscren on multiple screens
+- [REVIEW] snap screen adaptation
 - [TODO] Db management and connection -> tasks and groups
-- [TODO] Function to remove task.
-- [TODO] start saving tasks
+- [BUGGED] start saving tasks organize the data that should be saved?
+- [REVIEW] review code and reorganize the functions
+- [TODO] correct the buttons and UI positions 
+- [TODO] start recreating the interface with custom icons
+- [TODO-DIF REVISION] define the size of task blocks, task blocks "infinite" size with rolling scroll 
+- [TODO-DIF REVISION] define the minimum size and aspect ratio for the tasks
 
 ## Version Control
 
