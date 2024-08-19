@@ -2,7 +2,7 @@
 import json
 import os
 from PySide6.QtCore import Qt
-from data_manager import save_groups_and_tasks, extract_groups_and_tasks
+#from data_manager import save_groups_and_tasks, extract_groups_and_tasks
 #from PySide6.QtWidgets import QFrame, QLabel, QHBoxLayout, QCheckBox
 
 SETTINGS_FILE = "user_config.json"
@@ -43,8 +43,8 @@ def save_current_settings(root, current_settings):
     save_settings(settings) # create and save settings file with the current settings.
 
     # Save the groups and tasks
-    groups_data = extract_groups_and_tasks(root)
-    save_groups_and_tasks(groups_data)
+  #  groups_data = extract_groups_and_tasks(root)
+   # save_groups_and_tasks(groups_data)
 
 
 """

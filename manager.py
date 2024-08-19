@@ -19,10 +19,12 @@ def main():
     # Create/Set up the main window
     create_main_window(root, settings)
 
+#OGRADAAAAAAAAAAAAAAAA
     # Set up the menu -- THIS CHANGED INTO A CLASS ON UI COMPONENTS, MANAGING ONLY THE GROUP ACTIONS FOR NOW.
     create_menu(root)
-
-    # Apply saved groups and tasks
+    
+#OGRADAAAAAAAAAAAAAAAA
+    # Apply saved groups and tasks -- BUGGED
     apply_groups_and_tasks(root)
 
     root.show()
