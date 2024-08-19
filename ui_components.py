@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWidget, QMainWindow, QApplication, QLabel, QVBoxLayout, QFrame, QMenu, QCheckBox, QInputDialog, QHBoxLayout, QComboBox, QSizePolicy, QPushButton, QToolBar
-from PySide6.QtGui import QAction, QIcon, QRegion
+from PySide6.QtGui import QAction, QIcon, QRegion, QLinearGradient, QPainter, QColor
 from PySide6.QtCore import Qt,QPoint, QRect
 from event_handlers import  open_calendar, open_settings
 from utils import get_icon_path
@@ -36,6 +36,29 @@ import sys
         # Set the custom menu bar as the widget's layout
         self.setLayout(layout)
 """
+#defines a gradient label
+class GradientLabel(QLabel):
+    def __init__(self, text, parent=None):
+        super().__init__(text, parent)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        gradient = QLinearGradient(0, 0, self.width(), self.height())
+
+        # Set up gradient stops with more points for a smoother transition
+        gradient.setColorAt(0, QColor(76, 175, 80, 0))      # Transparent at the edges
+        gradient.setColorAt(0.3, QColor(76, 175, 80, 60))  # Slightly opaque closer to the center
+        gradient.setColorAt(0.5, QColor(76, 175, 80, 180))   # Fully opaque at the center
+        gradient.setColorAt(0.7, QColor(76, 175, 80, 60))  # Slightly opaque as it transitions back to transparent
+        gradient.setColorAt(1, QColor(76, 175, 80, 0))       # Transparent at the other edge
+
+
+        painter.fillRect(self.rect(), gradient)
+        painter.setPen(self.palette().windowText().color())
+        painter.drawText(self.rect(), self.alignment(), self.text())
+
+        painter.end()
+
 #defines the top menu bar 
 class CustomTopMenuBar(QToolBar):
     def __init__(self, parent=None):
@@ -102,17 +125,10 @@ class TaskManagerMainWindow(QMainWindow):
         self.setMinimumSize(300, 250)  # Set minimum window sizewidth = 400, Minimum height = 300
         self.setWindowTitle("Task Management Optimizer")  # Set the window title
 
-        # Create a central widget and layout
-       # central_widget = QWidget(self)
-      #  self.setCentralWidget(central_widget)
-      #  layout = QVBoxLayout(central_widget)
-
-
         self.snap_threshold = 50  # Distance to the screen edge where snapping occurs
         self._drag_active = False
         self._drag_position = QPoint()
 
-       
     def set_window_icon(self, icon_path):
         self.setWindowIcon(QIcon(icon_path))
 
@@ -172,8 +188,6 @@ class TaskManagerMainWindow(QMainWindow):
 
         return snapped_pos
 
-    
-
 # sets up the main window (change name?)
 def create_main_window(root, settings):
     #configure the basic window properties
@@ -220,11 +234,39 @@ def create_menu(root):
             # Create a new frame for the group
             group_frame = QFrame(root.centralWidget())
             group_frame.setFrameShape(QFrame.Box)
+            group_frame.setFixedSize(280, 150)  # Example fixed size
+            group_frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            print(group_frame.width(), group_frame.height(),flush=True)
+            #group_frame.setFixedSize(relative_width, relative_height)
             group_layout = QVBoxLayout(group_frame)
 
-            # Create a label for the group
-            group_label = QLabel(group_name)
-            group_layout.addWidget(group_label)
+            # Set a small top margin to reduce the distance between label and top of group frame
+            group_layout.setContentsMargins(10, 5, 10, 5)  # Left, Top, Right, Bottom margins
+
+            # Create a separate widget for the label
+            label_widget = QWidget()
+            label_layout = QVBoxLayout(label_widget)
+            label_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins for the label
+            # Set a fixed height for the label widget
+           # label_widget.setFixedHeight(30)  # Example: height = 50 pixels
+
+            # Create the label for the group
+            group_label = GradientLabel(group_name) #QLabel(group_name)
+            group_label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+            # Set a green background and other styles for the label
+            group_label.setStyleSheet("""
+                background-color: rgba(76, 175, 80, 150);  /* Green background color with 150/255 transparency */
+                border: 1px solid #2E7D32;  /* Dark green border */
+                padding: 4px;               /* Padding around the text */
+                font-weight: bold;          /* Bold font */
+                color: white;               /* White text color */
+            """)
+
+            # Adjust the width of the label to fit the text
+            group_label.adjustSize()
+            label_layout.addWidget(group_label)
+            # Add the label widget to the group layout, anchored to the top
+            group_layout.addWidget(label_widget, alignment=Qt.AlignTop)
 
             # Right-click menu for the group
             group_frame.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -232,6 +274,7 @@ def create_menu(root):
 
             # Add the group to the central widget's layout
             root.centralWidget().layout().addWidget(group_frame)
+
 
     def show_group_menu(pos, group_frame, group_layout, root):
         menu = QMenu()
