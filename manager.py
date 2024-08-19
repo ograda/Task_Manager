@@ -1,66 +1,26 @@
 
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout, QMenu
-from PySide6.QtCore import Qt, QPoint
-import os
-from config import load_settings, save_current_settings
-from ui_components import create_menu, create_main_window, create_group, apply_groups_and_tasks
-from event_handlers import start_drag, do_drag, on_closing, bind_right_click_to_create_group, toggle_always_on_top, close_event_handler
-from data_manager import load_groups_and_tasks
-
-class MyMainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self._drag_active = False
-        self._drag_position = QPoint()
-
-        # Custom title bar and other setup...
-        self.create_custom_title_bar()
-
-    def create_custom_title_bar(self):
-        # Custom title bar setup (placeholder)
-        pass
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self._drag_active = True
-            self._drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
-            event.accept()
-
-    def mouseMoveEvent(self, event):
-        if self._drag_active:
-            self.move(event.globalPosition().toPoint() - self._drag_position)
-            event.accept()
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            self._drag_active = False
-            event.accept()
+from PySide6.QtWidgets import QApplication
+from config import load_settings
+from ui_components import TaskManagerMainWindow, create_menu, create_main_window, apply_groups_and_tasks
+from event_handlers import close_event_handler
 
 def main():
 
-    app = QApplication([])
+    app = QApplication([]) #start the application and manage resources
+    root = TaskManagerMainWindow() #create the main window
 
-    root = MyMainWindow()
-    # Setup event handlers
+#OGRADAAAAAAAAAAAAAAAA
+    # Setup event handlers should we move this  ELSEWHERE??????
     root.closeEvent = lambda event: close_event_handler(event, root, settings)
 
-    # Load configuration
+    # Load the last saved settings
     settings = load_settings()
 
-     # Apply settings
-    always_on_top = settings.get("always_on_top", True)
-    toggle_always_on_top(root, always_on_top)
+    # Create/Set up the main window
+    create_main_window(root, settings)
 
-
-    fullscreen = settings.get("fullscreen", False)
-    minimize_to_tray = settings.get("minimize_to_tray", False)
-    last_geometry = settings.get("window_geometry", "400x300")
-
-    # Create the main window
-    create_main_window(root, settings, fullscreen, always_on_top)
-
-    # Set up the menu
-    create_menu(root, fullscreen, always_on_top, minimize_to_tray, last_geometry, settings)
+    # Set up the menu -- THIS CHANGED INTO A CLASS ON UI COMPONENTS, MANAGING ONLY THE GROUP ACTIONS FOR NOW.
+    create_menu(root)
 
     # Apply saved groups and tasks
     apply_groups_and_tasks(root)
@@ -72,35 +32,15 @@ def main():
 if __name__ == "__main__":
     main()
 
-#def main():
- #   config = load_config()
-  
-
-    # Create the main window
- #   app = QApplication([])
- #   root = QMainWindow()
-
-  #  root = MyMainWindow()
-
-     # load config variables, or set default values -- move this elsewhere
-  #  fullscreen = config.get("fullscreen", False)
-  #  always_on_top = config.get("always_on_top", True)
-  #  minimize_to_tray = config.get("minimize_to_tray", False)
-  # last_geometry = ""  # Variable to store the last geometry
 
  #   create_main_window(root, icon_path, config, fullscreen, always_on_top)
-    
-
     #root.bind("<Button-1>", start_drag)
     #root.bind("<B1-Motion>", do_drag)
   #  create_menu(root, fullscreen, always_on_top, minimize_to_tray, last_geometry)
-
     # Ensure taskbar icon shows correctly
     #root.after(10, lambda: root.iconify())
    # root.after(20, lambda: root.deiconify())
     # Handle closing
-   # root.protocol("WM_DELETE_WINDOW", lambda: on_closing(root, minimize_to_tray))
-
    # root.protocol("WM_DELETE_WINDOW", lambda: on_closing(root, minimize_to_tray))
  #   create_group_function = create_group(root)
    # bind_right_click_to_create_group(root, create_group_function)
@@ -123,7 +63,5 @@ if __name__ == "__main__":
    # layout.setContentsMargins(0, 20, 0, 0)  # Top padding of 20px
 
     #root.bind('<Motion>', lambda event: update_coordinates(event, label))
-
-
     #root.mainloop()
 

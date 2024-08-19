@@ -1,127 +1,168 @@
-from PySide6.QtWidgets import QWidget, QMainWindow, QLabel, QPushButton, QVBoxLayout, QFrame, QMenu, QCheckBox, QInputDialog, QHBoxLayout, QComboBox
-from PySide6.QtGui import QAction
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QWidget, QMainWindow, QLabel, QPushButton, QVBoxLayout, QFrame, QMenu, QCheckBox, QInputDialog, QHBoxLayout, QComboBox, QSizePolicy, QToolBar
+from PySide6.QtGui import QAction, QIcon
+from PySide6.QtCore import Qt,QPoint
 from event_handlers import  open_calendar, on_closing, open_settings
-from utils import set_window_icon
+from utils import get_icon_path
 from data_manager import load_groups_and_tasks
+
+"""  
+        self.setFixedHeight(title_bar_height)  # Adjust height as needed
+
+         # Apply style to mimic QMenuBar
+        self.setStyleSheet("" "
+            QWidget {
+                background-color: #f0f0f0;
+                border-bottom: 1px solid #cccccc;
+            }
+            QPushButton {
+                background-color: transparent;
+                border: none;
+                padding: 5px 1px;
+            }
+            QPushButton:hover {
+                background-color: #e0e0e0;
+            }
+            QComboBox {
+                background-color: #ffffff;
+                border: 1px solid #cccccc;
+                padding: 3px 1px;
+            }
+        " "")
+
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Set the custom menu bar as the widget's layout
+        self.setLayout(layout)
+"""
+class CustomTopMenuBar(QToolBar):
+    def __init__(self, parent=None):
+        super().__init__("Custom Top Menu Bar", parent)
+        
+        # Prevent the toolbar from being moved
+        self.setMovable(False)
+        
+        # Style the toolbar to look like a menu bar
+      #  self.setStyleSheet("""
+       #     QToolBar {
+      #          border: none;
+       #         padding: 0px;
+       #         margin: 0px;
+       #     }
+       # """) #background-color: #f0f0f0;
+
+        # Add a spacer to push the group selector to the center
+        spacer_left = QWidget(self)
+        spacer_left.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.addWidget(spacer_left)
+
+        # Add group selector to the toolbar (center-aligned)
+        group_selector = QComboBox(self)
+        group_selector.addItems(["Group 1", "Group 2", "Group 3"])
+        self.addWidget(group_selector)
+
+        # Add a spacer to push the remaining items to the right
+        spacer_right = QWidget(self)
+        spacer_right.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.addWidget(spacer_right)
+
+
+class CustomBottomMenuBar(QToolBar):
+    def __init__(self, parent=None):
+        super().__init__("Custom Bottom Menu Bar", parent)
+
+        self.setMovable(False) # Prevent the toolbar from being moved
+
+        # Add actions to the bottom toolbar
+        self.settings_button = QAction("Settings", self)
+        self.addAction(self.settings_button)
+
+        self.calendar_button = QAction("Calendar", self)
+        self.addAction(self.calendar_button)
+
+        # Add a spacer to push the next item to the right
+        spacer = QWidget(self)
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.addWidget(spacer)
+
+        # Add the help button (right-aligned)
+        help_action = QAction("?", self)
+        help_action.setToolTip("Help information: Right-click to create or delete groups.\nWithin a group, right-click to create tasks.\nTasks have a checkbox to mark them as complete.")
+        help_action.setEnabled(False)  # Make the action unclickable
+        self.addAction(help_action)      
+
+class TaskManagerMainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self._drag_active = False
+        self._drag_position = QPoint()
+        self.setMinimumSize(400, 300)  # Set minimum window sizewidth = 400, Minimum height = 300
+        self.setWindowTitle("Task Management Optimizer")  # Set the window title
+        
+    def set_window_icon(self, icon_path):
+        self.setWindowIcon(QIcon(icon_path))
+
+    def initUI(self, layout):
+        # adding other components
+        #button = QPushButton("A Button", self)
+        #layout.addWidget(button)
+
+        # Create the top toolbar
+        self.top_toolbar = CustomTopMenuBar()
+        self.addToolBar(Qt.TopToolBarArea, self.top_toolbar)
+
+        # Create the bottom toolbar
+        self.bottom_toolbar = CustomBottomMenuBar() 
+        self.addToolBar(Qt.BottomToolBarArea, self.bottom_toolbar)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_active = True
+            self._drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self._drag_active:
+            self.move(event.globalPosition().toPoint() - self._drag_position)
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_active = False
+            event.accept()
 
 
 # CREATE THE MAIN WINDOW AND DEFINE ITS PROPERTIES
-def create_main_window(root, config, fullscreen, always_on_top):
-    #create_custom_title_bar(root) # test custom title bar
-    # Set the window title
-    root.setWindowTitle(config.get("window_title", "Task Management Optimizer"))
+def create_main_window(root, settings):
+    #configure the basic window properties
+    root.set_window_icon(get_icon_path()) 
+    # get the last width and height from the settings
+    settings_Width, settings_Height = settings.get("window_geometry", "400x300").split("x")
+    settings_PosX, settings_PosY = settings.get("window_position", "100x100").split("x")
+    root.setGeometry(int(settings_PosX), int(settings_PosY), int(settings_Width), int(settings_Height))
 
-     # Set the window icon using the utility function
-    set_window_icon(root)
+    root.setWindowFlag(Qt.WindowStaysOnTopHint, settings.get("always_on_top")) # Set the window always on top based on settings
+    if settings.get("fullscreen"): #set fullscreen if this was the last setting saved
+        root.showMaximized()
+    else:
+        root.showNormal()
 
-    # Create the central widget and layout
+    root.setWindowFlag(Qt.WindowStaysOnTopHint, settings.get("always_on_top")) # Set the window always on top based on settings
+    root.show()
+
+    # Create the central widget
     central_widget = QWidget(root)
     central_layout = QVBoxLayout(central_widget)
     root.setCentralWidget(central_widget)
 
+    # Additional UI components like buttons, etc.
+    root.initUI(central_layout)    
 
-    # GROUP SELECT
-    selection_box = QComboBox()
-    selection_box.addItems(["Option 1", "Option 2", "Option 3"])
-    central_layout.addWidget(selection_box, alignment=Qt.AlignCenter)
-
-
-    # Add the Calendar button to the bottom left
-    bottom_layout = QHBoxLayout()
-    calendar_button = QPushButton("Open Calendar")
-    calendar_button.clicked.connect(lambda: open_calendar(root))
-    bottom_layout.addWidget(calendar_button, alignment=Qt.AlignLeft)
+    root.bottom_toolbar.calendar_button.triggered.connect(lambda: open_calendar(root))
+    root.bottom_toolbar.settings_button.triggered.connect(lambda: open_settings(root, settings))
 
 
-    # Add the Settings button to the bottom right
-    settings_button = QPushButton("Settings")
-    settings_button.clicked.connect(lambda: open_settings(root, config))
-    bottom_layout.addWidget(settings_button, alignment=Qt.AlignRight)
-
-
-
-   # help_button.leaveEvent = lambda event: hide_help(event, root)
-
-    # Add the Help button next to the Settings button
-    # Add the Help button next to the Settings button
-    help_button = QPushButton("Help")
-    bottom_layout.addWidget(help_button, alignment=Qt.AlignRight)
-    help_button.setToolTip("Help information: Right-click to create or delete groups.\nWithin a group, right-click to create tasks.\nTasks have a checkbox to mark them as complete.")
-
-    # Add the bottom layout to the central layout
-    central_layout.addLayout(bottom_layout)
-
-    # Parse the geometry string and set the window size
-    geometry_str = config.get("window_geometry", "400x300")
-    awidth, aheight = 400, 300
-    root.setGeometry(100, 100, awidth, aheight)
-
-  #  if fullscreen:
-  #      root.showFullScreen()
- #   else:
-  #      root.showNormal()
-
-    if always_on_top:
-        root.setWindowFlag(Qt.WindowStaysOnTopHint, True)
-
-#create the custom tittle bar
-def create_custom_title_bar(root):
-    # Create a title bar frame
-    title_bar = QFrame(root)
-    title_bar.setFixedHeight(30)  # Adjust the height as needed
-    title_bar.setStyleSheet("background-color: #444; color: white;")
-
-    # Create a horizontal layout for the title bar
-    title_layout = QHBoxLayout(title_bar)
-    title_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins
-
-    # Add a label for the title
-    title_label = QLabel("Task AAAAAAAAAA Manager", title_bar)
-    title_layout.addWidget(title_label)
-
-    # Spacer to push buttons to the right
-    title_layout.addStretch()
-
- # Add custom buttons
-    custom_button = QPushButton("Custom", title_bar)
-    custom_button.setFixedSize(30, 30)  # Adjust size as needed
-    custom_button.setStyleSheet("background-color: #555; border: none; color: white;")
-    custom_button.clicked.connect(lambda: print("Custom button clicked"))
-    title_layout.addWidget(custom_button)
-
-    # Add minimize, maximize, and close buttons
-    minimize_button = QPushButton("-", title_bar)
-    minimize_button.setFixedSize(30, 30)
-    minimize_button.setStyleSheet("background-color: #555; border: none; color: white;")
-    minimize_button.clicked.connect(root.showMinimized)
-    title_layout.addWidget(minimize_button)
-
-    maximize_button = QPushButton("+", title_bar)
-    maximize_button.setFixedSize(30, 30)
-    maximize_button.setStyleSheet("background-color: #555; border: none; color: white;")
-    maximize_button.clicked.connect(lambda: root.showNormal() if root.isMaximized() else root.showMaximized())
-    title_layout.addWidget(maximize_button)
-
-    close_button = QPushButton("x", title_bar)
-    close_button.setFixedSize(30, 30)
-    close_button.setStyleSheet("background-color: #555; border: none; color: white;")
-    close_button.clicked.connect(root.close)
-    title_layout.addWidget(close_button)
-
-    # Set the custom title bar as the layout of a QWidget
-    title_widget = QWidget()
-    title_widget.setLayout(title_layout)
-    root.setMenuWidget(title_widget)  # Use setMenuWidget to replace the title bar
-
-def create_menu(root, fullscreen, always_on_top, minimize_to_tray, last_geometry, settings):
-    menubar = root.menuBar()
-    
-    # Create settings menu without tearoff
-    settings_menu = QMenu("Settings", menubar)
-    settings_menu.addAction("Option 1")
-    settings_menu.addAction("Option 2")
-    menubar.addMenu(settings_menu)
+def create_menu(root):
 
     # Add right-click context menu for adding groups
     root.setContextMenuPolicy(Qt.ActionsContextMenu)
