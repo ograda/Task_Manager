@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWidget, QSizeGrip, QScrollArea, QMainWindow, QApplication, QLabel, QVBoxLayout, QFrame, QMenu, QCheckBox, QInputDialog, QHBoxLayout, QComboBox, QSizePolicy, QGridLayout, QToolBar, QStyle, QStyleOptionComboBox
-from PySide6.QtGui import QAction, QIcon, QLinearGradient, QPainter, QColor, QDrag, QDropEvent
+from PySide6.QtGui import QAction, QIcon, QLinearGradient, QPainter, QColor, QDrag, QDropEvent, QCursor
 from PySide6.QtCore import Qt,QPoint, QMimeData, QSize
 from event_handlers import  open_calendar, open_settings
 from utils import get_icon_path
@@ -285,6 +285,9 @@ class DraggableFrame(QFrame):
         super().__init__(parent)
         self.setFrameShape(QFrame.Box)
         self.setFixedSize(280, 150)  # Example fixed size
+        
+        self.setMinimumFrameHeight = 150  # Initial height
+        self.setMaximumFrameHeight = 500 # Maximum height
 
         #identification of the groupobject
         self.unique_id = unique_id
@@ -353,6 +356,14 @@ class DraggableFrame(QFrame):
         # Enable dragging
         self.setAcceptDrops(False)
         self.setObjectName(str(self.unique_id))
+
+        # Set the mouse tracking to true to track the mouse movements
+        self.setMouseTracking(True)
+
+        # Initialize resizing variables
+        self._resizing = False
+        self._drag_start_position = None
+        self._initial_height = None
 
     def show_context_menu(self, pos: QPoint):
         global_pos = self.mapToGlobal(pos)
@@ -585,6 +596,14 @@ class DraggableFrame(QFrame):
         self.setParent(None)
         self.deleteLater()
 
+    #def mousePressEvent(self, event):
+    #    if event.button() == Qt.LeftButton:
+     #       if self.is_near_bottom_border(event.position().toPoint()):
+     #           self._resizing = True
+      ##         drag = QDrag(self)
+       #         mime_data = QMimeData()
+
+
     def mousePressEvent(self, event):
         clicked_widget = self.childAt(event.pos())
 
@@ -592,21 +611,27 @@ class DraggableFrame(QFrame):
             print(f"Forwarding event to TaskWidget: {clicked_widget.uid}")
             # Forward the event to the TaskWidget
             clicked_widget.mousePressEvent(event)
-        elif event.button() == Qt.LeftButton and self.group_label.geometry().contains(event.pos()):
-            print(f"Mouse press event on GradientLabel at position: {event.pos()}")
-            drag = QDrag(self)
-            mime_data = QMimeData()
+        elif event.button() == Qt.LeftButton:
+            if self.is_near_bottom_border(event.position().toPoint()):
+                self._resizing = True
+                self._drag_start_position = event.position().toPoint()
+                self._initial_height = self.height()
+                event.accept()
+            elif self.group_label.geometry().contains(event.pos()):
+                print(f"Mouse press event on GradientLabel at position: {event.pos()}")
+                drag = QDrag(self)
+                mime_data = QMimeData()
 
-            # Store the widget's unique ID in the mime data
-            mime_data.setText(self.objectName())
-            drag.setMimeData(mime_data)
+                # Store the widget's unique ID in the mime data
+                mime_data.setText(self.objectName())
+                drag.setMimeData(mime_data)
 
-            # Create a visual representation for dragging
-            pixmap = self.grab()  # Grabs an image of the widget
-            drag.setPixmap(pixmap)
-            drag.setHotSpot(event.pos())  # Adjust hotspot to the click position
-            drag.exec(Qt.MoveAction)
-            print("Dragging group initiated")
+                # Create a visual representation for dragging
+                pixmap = self.grab()  # Grabs an image of the widget
+                drag.setPixmap(pixmap)
+                drag.setHotSpot(event.pos())  # Adjust hotspot to the click position
+                drag.exec(Qt.MoveAction)
+                print("Dragging group initiated")
         elif event.button() == Qt.RightButton and self.group_label.geometry().contains(event.pos()):
             print(f"Right-click detected on GradientLabel; triggering context menu")
             self.show_title_context_menu(event.pos())
@@ -614,6 +639,41 @@ class DraggableFrame(QFrame):
             # If the click is not on the GradientLabel or a TaskWidget, propagate it normally
             print(f"ELSE DRAGGABLEFRAME: ", flush=True)
             super().mousePressEvent(event)
+
+
+    def mouseMoveEvent(self, event):
+        if self._resizing:
+            delta_y = event.position().toPoint().y() - self._drag_start_position.y()
+            new_height = self._initial_height + delta_y
+
+            if new_height < self.setMinimumFrameHeight:
+                print(f"Blocked resizing at minimum height. Attempted Height: {new_height}, Min Height: {self.setMinimumFrameHeight}", flush=True)
+                new_height = self.setMinimumFrameHeight
+            elif new_height > self.setMaximumFrameHeight:
+                print(f"Blocked resizing at maximum height. Attempted Height: {new_height}, Max Height: {self.setMaximumFrameHeight}", flush=True)
+                new_height = self.setMaximumFrameHeight
+            else:
+                print(f"Resizing... New Height: {new_height}", flush=True)
+
+            self.setFixedHeight(new_height)
+            event.accept()
+        else:
+            if self.is_near_bottom_border(event.position().toPoint()):
+                self.setCursor(QCursor(Qt.SizeVerCursor))
+            else:
+                self.setCursor(QCursor(Qt.ArrowCursor))
+
+        super().mouseMoveEvent(event)
+
+
+    def mouseReleaseEvent(self, event):
+        if self._resizing:
+            self._resizing = False
+            event.accept()
+        super().mouseReleaseEvent(event)
+
+    def is_near_bottom_border(self, pos):
+        return abs(pos.y() - self.height()) < 10  # Check if the mouse is within 10 pixels of the bottom border        
 
 
 class CustomComboBox(QComboBox):
@@ -790,8 +850,8 @@ class CentralWidget(QWidget):
         #size_grip = QSizeGrip(self)
       #  self.layout.addWidget(size_grip, alignment=Qt.AlignBottom | Qt.AlignRight)
         # Add a QSizeGrip to the bottom-right corner for resizing the entire widget
-        size_grip = QSizeGrip(self)
-        self.layout.addWidget(size_grip, self.layout.rowCount(), self.layout.columnCount() - 1, 1, 1, alignment=Qt.AlignBottom | Qt.AlignRight)
+       # size_grip = QSizeGrip(self)
+     #  self.layout.addWidget(size_grip, self.layout.rowCount(), self.layout.columnCount() - 1, 1, 1, alignment=Qt.AlignBottom | Qt.AlignRight)
 
 
     def prompt_add_group(self):
