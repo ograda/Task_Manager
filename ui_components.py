@@ -1,10 +1,12 @@
-from PySide6.QtWidgets import QWidget, QScrollArea, QMainWindow, QApplication, QLabel, QVBoxLayout, QFrame, QMenu, QCheckBox, QInputDialog, QHBoxLayout, QComboBox, QSizePolicy, QPushButton, QGridLayout, QToolBar
-from PySide6.QtGui import QAction, QIcon, QRegion, QLinearGradient, QPainter, QColor, QDrag
-from PySide6.QtCore import Qt,QPoint, QRect, QMimeData
+from PySide6.QtWidgets import QWidget, QScrollArea, QMainWindow, QApplication, QLabel, QVBoxLayout, QFrame, QMenu, QCheckBox, QInputDialog, QHBoxLayout, QComboBox, QSizePolicy, QPushButton, QGridLayout, QToolBar, QStyle, QStyleOptionComboBox
+from PySide6.QtGui import QAction, QIcon, QRegion, QLinearGradient, QPainter, QColor, QDrag, QDropEvent
+from PySide6.QtCore import Qt,QPoint, QRect, QMimeData, QSize
 from event_handlers import  open_calendar, open_settings
 from utils import get_icon_path
 from data_manager import load_groups_and_tasks
-import sys
+import uuid
+
+
 
 """  
         self.setFixedHeight(title_bar_height)  # Adjust height as needed
@@ -36,6 +38,50 @@ import sys
         # Set the custom menu bar as the widget's layout
         self.setLayout(layout)
 """
+#define the task widget and its properties
+class TaskWidget(QFrame):
+    def __init__(self, task_name, parent=None):
+        super().__init__(parent)
+        #self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        #self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Fixed height to control size
+
+        # Apply the border and background to the entire QFrame
+        self.setStyleSheet("""
+            QFrame {
+                border: 3px solid #4DD0E1;  /* Border color */
+                border-radius: 5px;         /* Rounded corners */
+                background-color: #FFFFFF;  /* Background color */
+            }
+        """)
+
+        layout = QHBoxLayout(self)
+        #layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(5, 5, 5, 5)  # Adjust margins to ensure the border looks correct
+        layout.setSpacing(10)  # Add some spacing between the checkbox and the label
+
+        # Create the checkbox
+        self.checkbox = QCheckBox(self)
+        self.checkbox.setStyleSheet("margin: 0px;")  # Ensure checkbox margin does not interfere with the layout
+        layout.addWidget(self.checkbox)
+
+        # Create the label for the task text
+        self.label = QLabel(task_name, self)
+        self.label.setWordWrap(True)  # Enable text wrapping
+        #self.label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
+        self.label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        #background-color: transparent;  /* Ensure label background is transparent *
+        self.label.setStyleSheet("""
+            background-color: #E0F7FA;  /* Light blue background */
+            padding: 10px;               /* Padding around the text */
+            border: 1px solid #4DD0E1;  /* Border color */
+            border-radius: 5px;         /* Rounded corners */
+            color: red;               /* White text color */ 
+        """)
+        layout.addWidget(self.label)
+        # Set a fixed height to match the height of a typical task
+        self.setFixedHeight(self.sizeHint().height())
+
 #defines a gradient label
 class GradientLabel(QLabel):
     def __init__(self, text, parent=None):
@@ -52,12 +98,297 @@ class GradientLabel(QLabel):
         gradient.setColorAt(0.7, QColor(76, 175, 80, 60))  # Slightly opaque as it transitions back to transparent
         gradient.setColorAt(1, QColor(76, 175, 80, 0))       # Transparent at the other edge
 
-
         painter.fillRect(self.rect(), gradient)
         painter.setPen(self.palette().windowText().color())
         painter.drawText(self.rect(), self.alignment(), self.text())
 
+        painter.end() 
+
+# create the group frame class with tasks and its functions
+class DraggableFrame(QFrame):
+    def __init__(self, group_name, unique_id, parent=None):
+        super().__init__(parent)
+        self.setFrameShape(QFrame.Box)
+        self.setFixedSize(280, 150)  # Example fixed size
+
+        #identification of the groupobject
+        self.unique_id = unique_id
+        # Store the group name
+        self.group_name = group_name
+
+        # Create a layout for the group frame
+        self.group_layout = QVBoxLayout(self)
+        self.group_layout.setContentsMargins(10, 5, 10, 5)  # Left, Top, Right, Bottom margins
+        self.group_layout.setAlignment(Qt.AlignTop)  # Align tasks to the top
+
+        # Create the label for the group
+        self.group_label = GradientLabel(group_name, self)
+        self.group_label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.group_label.setStyleSheet("""
+            background-color: rgba(76, 175, 80, 150);  /* Green background color with 150/255 transparency */
+            border: 1px solid #2E7D32;  /* Dark green border */
+            padding: 4px;               /* Padding around the text */
+            font-weight: bold;          /* Bold font */
+            color: white;               /* White text color */
+        """)
+        self.group_label.adjustSize()
+        self.group_layout.addWidget(self.group_label, alignment=Qt.AlignTop)
+        
+
+#OGRADAAAAAAAAAAAAAAAA
+        # Add scroll area for tasks with an invisible background
+        self.scroll_area = QScrollArea(self)
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        #self.scroll_area.setFixedSize(280, 250)  # Fixed size for task area
+       # self.scroll_area.setStyleSheet("""
+        """    QScrollArea {
+                background: transparent;
+                border: none;
+            }
+            QScrollBar:vertical {
+                background: rgba(76, 175, 80, 0);  /* Invisible scrollbar background */
+                width: 10px;
+                margin: 0px 0px 0px 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(76, 175, 80, 150);  /* Handle matching group color */
+                border-radius: 5px;
+            }
+        """#)
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+
+        # Create a widget to hold the tasks and set it as the scroll area's widget
+        self.task_container = QWidget()
+        self.task_layout = QVBoxLayout(self.task_container)
+        self.task_layout.setContentsMargins(10, 5, 10, 5)  # Adjust margins to control spacing
+        self.task_layout.setAlignment(Qt.AlignTop)  # Align tasks to the top
+        self.scroll_area.setWidget(self.task_container)
+        self.group_layout.addWidget(self.scroll_area)
+
+        # Connect right-click menu for the group label (title)
+        self.group_label.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.group_label.customContextMenuRequested.connect(self.show_title_context_menu)
+
+        # Enable right-click context menu for tasks
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+
+        # Enable dragging
+        self.setAcceptDrops(False)
+        self.setObjectName(str(self.unique_id))
+
+    def show_context_menu(self, pos: QPoint):
+        """Show the context menu for adding or deleting tasks."""
+        global_pos = self.mapToGlobal(pos)
+
+        menu = QMenu(self)
+
+        # Determine if we're clicking on an existing task
+        clicked_widget = self.childAt(pos)
+
+        # Add an "Add Task" action
+        add_task_action = QAction("Add Task", self)
+        add_task_action.triggered.connect(self.add_task)
+        menu.addAction(add_task_action)
+
+        # Traverse up the widget tree to find the TaskWidget, if clicked on its child
+        while clicked_widget is not None and not isinstance(clicked_widget, TaskWidget):
+            clicked_widget = clicked_widget.parentWidget()
+        if isinstance(clicked_widget, TaskWidget):
+            # Add a "Delete Task" action
+            delete_task_action = QAction("Delete Task", self)
+            delete_task_action.triggered.connect(lambda: self.delete_task(clicked_widget))
+            menu.addAction(delete_task_action)
+
+        menu.exec(global_pos)
+
+    def add_task(self):
+        """Add a new task (checkbox) to the group."""
+        task_name, ok = QInputDialog.getText(self, "New Task", "Enter task name:")
+        if ok and task_name:
+            task_widget = TaskWidget(task_name, self.task_container)
+            self.task_layout.addWidget(task_widget)
+        #if ok and task_name:
+           # task_checkbox = QCheckBox(task_name, self.task_container)
+          #  task_checkbox.setStyleSheet(
+            """
+                QCheckBox::indicator {
+                    width: 15px;
+                    height: 15px;
+                }
+                QCheckBox {
+                    background-color: #E0F7FA;  /* Light blue background */
+                    padding: 10px;               /* Padding around the text */
+                    border: 1px solid #4DD0E1;  /* Border color */
+                    border-radius: 5px;         /* Rounded corners */
+                    word-wrap: true;            /* Allow line breaks */
+                }
+            """
+                       # task_checkbox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.MinimumExpanding)
+         #   task_checkbox.setWordWrap(True)  # Allow text to wrap within the checkbox
+            #task_checkbox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+           # self.task_layout.addWidget(task_checkbox)
+
+            # Adjust the scrollbar range and visibility
+           # self.update_scrollbar()
+
+    def delete_task(self, task_widget: QCheckBox):
+        """Delete the specified task."""
+        self.task_layout.removeWidget(task_widget)
+        task_widget.deleteLater()
+
+        # Adjust the scrollbar range and visibility
+        self.update_scrollbar()
+
+    def update_scrollbar(self):
+        """Update the scrollbar based on the number of tasks."""
+        self.task_container.adjustSize()
+        self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+
+    def show_title_context_menu(self, pos: QPoint):
+        """Show the context menu for renaming or deleting the group."""
+        global_pos = self.group_label.mapToGlobal(pos)
+
+        menu = QMenu(self)
+        rename_action = QAction("Rename Group", self)
+        delete_action = QAction("Delete Group", self)
+
+        rename_action.triggered.connect(self.rename_group)
+        delete_action.triggered.connect(self.delete_group)
+
+        menu.addAction(rename_action)
+        menu.addAction(delete_action)
+
+        menu.exec(global_pos)
+
+    def rename_group(self):
+        """Rename the group."""
+        new_name, ok = QInputDialog.getText(self, "Rename Group", "Enter new group name:", text=self.group_name)
+        if ok and new_name:
+            self.group_name = new_name
+            self.group_label.setText(new_name)
+
+    def delete_group(self):
+        """Delete the group."""
+        self.setParent(None)
+        self.deleteLater()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            drag = QDrag(self)
+            mime_data = QMimeData()
+
+            # Store the widget's unique ID in the mime data
+            mime_data.setText(self.objectName())
+            drag.setMimeData(mime_data)
+
+            # Create a visual representation for dragging
+           # drag.setHotSpot(event.position().toPoint())
+           # drag.exec(Qt.MoveAction)
+
+            # Create a visual representation for dragging
+            pixmap = self.grab()  # Grabs an image of the widget
+            drag.setPixmap(pixmap)
+            drag.setHotSpot(event.pos())  # Adjust hotspot to the click position
+            drag.exec(Qt.MoveAction)
+
+
+class CustomComboBox(QComboBox):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setStyleSheet("""
+            QComboBox {
+                padding: 2px;                   /* Padding inside the combo box */
+                min-width: 120px;               /* Minimum width of the combo box */
+            }
+            QComboBox::drop-down {
+                border: none;
+                background: none;
+                width: 0px;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                width: 0px;                        /* Width of the arrow */
+                height: 0px;                       /* Height of the arrow */
+            }
+            QAbstractItemView {
+                padding: 1px;
+            }
+        """)
+    
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        opt = QStyleOptionComboBox()
+        self.initStyleOption(opt)
+
+        # Remove the down arrow by not drawing the arrow
+        # Set iconSize to 0 to remove the space for the arrow
+        opt.iconSize = QSize(0, 0)
+
+        # Draw the combo box frame
+        self.style().drawComplexControl(QStyle.CC_ComboBox, opt, painter, self)
+
+        # Draw the text centered
+        text_rect = self.style().subControlRect(QStyle.CC_ComboBox, opt, QStyle.SC_ComboBoxEditField, self)
+        painter.drawText(text_rect, Qt.AlignCenter, self.currentText())
+
+        # End the painter to avoid QBackingStore errors
         painter.end()
+
+    def showPopup(self):
+        # Center align the text of each item in the drop-down menu
+        for i in range(self.count()):
+            self.setItemData(i, Qt.AlignCenter, Qt.TextAlignmentRole)
+        super().showPopup()
+
+#OGRADAAAAAAAAAAAAAAAA
+    #manage the lists -- greate list, delete list, rename list 
+    def showContextMenu(self, position):
+        # Create the context menu
+        menu = QMenu(self)
+
+        # Add actions to the menu
+        option_one = QAction("Option One", self)
+        option_two = QAction("Option Two", self)
+        option_three = QAction("Option Three", self)
+
+        # Connect actions to their respective handlers
+        option_one.triggered.connect(self.optionOneSelected)
+        option_two.triggered.connect(self.optionTwoSelected)
+        option_three.triggered.connect(self.optionThreeSelected)
+
+        # Add actions to the context menu
+        menu.addAction(option_one)
+        menu.addAction(option_two)
+        menu.addAction(option_three)
+
+        # Show the context menu at the position of the right-click
+        menu.exec(self.mapToGlobal(position))
+
+    def optionOneSelected(self):
+        print("Option One selected", flush=True)
+
+    def optionTwoSelected(self):
+        print("Option Two selected", flush=True)
+
+    def optionThreeSelected(self):
+        print("Option Three selected", flush=True)   
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.RightButton:
+            # create the management Lists menu
+            self.showContextMenu(event.pos())
+     #   elif event.button() == Qt.LeftButton:
+            # Do something else with the left mouse button
+         #   self.showPopup()
+        else:
+            # Default behavior for other buttons
+            super().mousePressEvent(event)
+
+
 
 #defines the top menu bar 
 class CustomTopMenuBar(QToolBar):
@@ -67,14 +398,8 @@ class CustomTopMenuBar(QToolBar):
         # Prevent the toolbar from being moved
         self.setMovable(False)
         
-        # Style the toolbar to look like a menu bar
-      #  self.setStyleSheet("""
-       #     QToolBar {
-      #          border: none;
-       #         padding: 0px;
-       #         margin: 0px;
-       #     }
-       # """) #background-color: #f0f0f0;
+        # set the toolbar style (we just need to adjust its padding
+        self.setStyleSheet("padding: 5px;")
 
         # Add a spacer to push the group selector to the center
         spacer_left = QWidget(self)
@@ -82,7 +407,7 @@ class CustomTopMenuBar(QToolBar):
         self.addWidget(spacer_left)
 
         # Add group selector to the toolbar (center-aligned)
-        group_selector = QComboBox(self)
+        group_selector = CustomComboBox(self)
         group_selector.addItems(["Group 1", "Group 2", "Group 3"])
         self.addWidget(group_selector)
 
@@ -114,53 +439,120 @@ class CustomBottomMenuBar(QToolBar):
         help_action = QAction("?", self)
         help_action.setToolTip("Help information: Right-click to create or delete groups.\nWithin a group, right-click to create tasks.\nTasks have a checkbox to mark them as complete.")
         help_action.setEnabled(False)  # Make the action unclickable
-        self.addAction(help_action)      
+        self.addAction(help_action)
+
+        # Add developer buttons to the bottom toolbar
+        self.debug_add_group_button = QAction("add group", self)
+        self.addAction(self.debug_add_group_button)
+
+        self.debug_add_collumn_button = QAction("add col", self)
+        self.addAction(self.debug_add_collumn_button)
+
+        self.debug_remove_collumn_button = QAction("rem col", self)
+        self.addAction(self.debug_remove_collumn_button)
 
 class CentralWidget(QWidget):
     def __init__(self):
         super().__init__()
-        self.layout = QGridLayout()  # Use grid layout for multi-directional placements
+        self.layout = QGridLayout()
+        self.layout.setSpacing(20)
+        self.layout.setContentsMargins(20, 20, 20, 20)
         self.setLayout(self.layout)
-        self.setAcceptDrops(True)
-        print("CentralWidget initialized", flush=True)
+        self.setAcceptDrops(True) # Enable dropping
 
-    def __del__(self):
-        print("CentralWidget deleted", flush=True)
+        # manage the columns and rows
+        self.current_row = 1
+        self.current_col = 0
+        self.max_columns = 3  # Maximum number of columns before wrapping to the next row
 
-    def add_widget(self, widget, row, col):
-        self.layout.addWidget(widget, row, col)
+    def prompt_add_group(self):
+        group_name, ok = QInputDialog.getText(self, "Group Name", "Enter the group name:")
+        if ok and group_name:
+            self.add_group(group_name)   
 
-    def adjust_layout(self, size):
-        # Adjust layout based on the new size
-        # Implement logic to calculate how many widgets can fit in the given size
-        pass
+    def add_group(self, group_name):
+        # Generate a unique ID for each group
+        unique_id = uuid.uuid4()
 
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasFormat('application/widget'):
-            event.accept()
-        else:
-            event.ignore()
+        # Create a new draggable frame for the group
+        group_frame = DraggableFrame(group_name, unique_id, self)
 
-    def dragMoveEvent(self, event):
-        event.accept()
+        # Add the group frame to the grid layout at the current position
+        self.layout.addWidget(group_frame, self.current_row, self.current_col)
 
-    def dropEvent(self, event):
-        # Handle dropping of widgets
-        event.setDropAction(Qt.MoveAction)
-        event.accept()
+        # Update column and row for the next widget
+        self.current_col += 1
+        if self.current_col >= self.max_columns:
+            self.current_col = 0
+            self.current_row += 1
 
     def mousePressEvent(self, event):
-        widget = self.childAt(event.pos())
-        if widget:
-            drag = QDrag(widget)
-            mime_data = QMimeData()
-            mime_data.setData('application/widget', b'')
-            drag.setMimeData(mime_data)
+        if event.button() == Qt.RightButton:
+            self.prompt_add_group()     
+        else:
+            # For other buttons, propagate the event to the parent
+            super().mousePressEvent(event)
 
-            pixmap = widget.grab()
-            drag.setPixmap(pixmap)
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
 
-            drag.exec_(Qt.MoveAction)
+    #custumize the drag move event (draging groups #OGRADAAAAAAAAAAAAAAAA)
+    def dragMoveEvent(self, event):
+       event.acceptProposedAction()
+
+    #execute the drag event
+    def dropEvent(self, event: QDropEvent):
+        # Find the widget that was dropped using the unique ID
+        source_widget = self.findChild(DraggableFrame, event.mimeData().text())
+        if not source_widget:
+            return
+
+        # Get the position where the widget is dropped
+        drop_position = event.position().toPoint()
+        target_widget = self.childAt(drop_position)
+
+        # If the drop target is not a DraggableFrame, find the closest DraggableFrame parent
+        while target_widget and not isinstance(target_widget, DraggableFrame):
+            target_widget = target_widget.parentWidget()
+
+        if isinstance(target_widget, DraggableFrame) and target_widget != source_widget:
+            # Swap the source and target widgets
+            source_index = self.layout.indexOf(source_widget)
+            target_index = self.layout.indexOf(target_widget)
+
+            source_row, source_col, _, _ = self.layout.getItemPosition(source_index)
+            target_row, target_col, _, _ = self.layout.getItemPosition(target_index)
+
+            self.layout.addWidget(source_widget, target_row, target_col)
+            self.layout.addWidget(target_widget, source_row, source_col)
+
+        event.acceptProposedAction()
+
+    #update the grid layout (rearrange the grid layout based on the current max_columns setting)
+    def update_grid_layout(self):
+        """Rearrange the grid layout based on the current max_columns setting."""
+        widgets = []
+        for i in range(self.layout.count()):
+            widget = self.layout.itemAt(i).widget()
+            if isinstance(widget, DraggableFrame):
+                widgets.append(widget)
+
+        # Clear the layout
+        for i in reversed(range(self.layout.count())):
+            widget = self.layout.itemAt(i).widget()
+            if widget:
+                self.layout.removeWidget(widget)
+
+        # Re-add widgets based on the new max_columns setting
+        self.current_row = 1
+        self.current_col = 0
+        for widget in widgets:
+            self.layout.addWidget(widget, self.current_row, self.current_col)
+            self.current_col += 1
+            if self.current_col >= self.max_columns:
+                self.current_col = 0
+                self.current_row += 1
 
 
 
@@ -173,10 +565,13 @@ class TaskManagerMainWindow(QMainWindow):
         self.setMinimumSize(300, 250)  # Set minimum window sizewidth = 400, Minimum height = 300
         self.setWindowTitle("Task Management Optimizer")  # Set the window title
 
+        self.snap_threshold = 50  # Distance to the screen edge where snapping occurs
+        self._drag_active = False
+        self._drag_position = QPoint()
 
         # Create the central widget
         self.central_widget = CentralWidget()
-        print("CentralWidget assigned to TaskManagerMainWindow", flush=True)
+
         # Wrap the central widget in a scroll area
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -185,22 +580,19 @@ class TaskManagerMainWindow(QMainWindow):
         # Set the scroll area as the central widget
         self.setCentralWidget(self.scroll_area)
 
+    def increase_columns(self):
+        self.central_widget.max_columns += 1
+        self.central_widget.update_grid_layout()
 
-        self.snap_threshold = 50  # Distance to the screen edge where snapping occurs
-        self._drag_active = False
-        self._drag_position = QPoint()
-
-    def __del__(self):
-        print("TaskManagerMainWindow deleted", flush=True)        
+    def decrease_columns(self):
+        if self.central_widget.max_columns > 1:
+            self.central_widget.max_columns -= 1
+            self.central_widget.update_grid_layout()      
 
     def set_window_icon(self, icon_path):
         self.setWindowIcon(QIcon(icon_path))
 
     def initUI(self, layout):
-        # adding other components
-        #button = QPushButton("A Button", self)
-        #layout.addWidget(button)
-
         # Create the top toolbar
         self.top_toolbar = CustomTopMenuBar()
         self.addToolBar(Qt.TopToolBarArea, self.top_toolbar)
@@ -209,10 +601,10 @@ class TaskManagerMainWindow(QMainWindow):
         self.bottom_toolbar = CustomBottomMenuBar() 
         self.addToolBar(Qt.BottomToolBarArea, self.bottom_toolbar)
 
-    def resizeEvent(self, event):
+   # def resizeEvent(self, event):
         # Adjust the number of frames based on window size
-        self.central_widget.adjust_layout(self.size())  # Assuming a method to adjust layout based on size
-        super().resizeEvent(event)
+      #  self.central_widget.adjust_layout(self.size())  # Assuming a method to adjust layout based on size
+        #super().resizeEvent(event)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -258,7 +650,7 @@ class TaskManagerMainWindow(QMainWindow):
         return snapped_pos
 
 # sets up the main window (change name?)
-def create_main_window(root, settings):
+def setup_main_window(root, settings):
     #configure the basic window properties
     root.set_window_icon(get_icon_path()) 
     # get the last width and height from the settings
@@ -276,9 +668,11 @@ def create_main_window(root, settings):
     root.show()
 
     # Create the central widget
-    central_widget = QWidget(root)
-    central_layout = QVBoxLayout(central_widget)
-    root.setCentralWidget(central_widget)
+  #  central_widget = QWidget(root)
+   # central_layout = QVBoxLayout(central_widget)
+  #  root.setCentralWidget(central_widget)
+
+    central_layout = root.central_widget
 
     # Additional UI components like buttons, etc.
     root.initUI(central_layout)    
@@ -286,140 +680,10 @@ def create_main_window(root, settings):
     root.bottom_toolbar.calendar_button.triggered.connect(lambda: open_calendar(root))
     root.bottom_toolbar.settings_button.triggered.connect(lambda: open_settings(root, settings))
 
+    root.bottom_toolbar.debug_add_group_button.triggered.connect(lambda: root.central_widget.prompt_add_group())
+    root.bottom_toolbar.debug_add_collumn_button.triggered.connect(lambda: root.increase_columns())
+    root.bottom_toolbar.debug_remove_collumn_button.triggered.connect(lambda: root.decrease_columns())
 
-#OGRADAAAAAAAAAAAAAAAA
-def create_menu(root):
-
-    # Add right-click context menu for adding groups
-    root.setContextMenuPolicy(Qt.ActionsContextMenu)
-    add_group_action = QAction("Add Group", root)
-    add_group_action.triggered.connect(lambda: create_group(root))
-    root.addAction(add_group_action)
-
-    def create_group(root):
-        print("Attempting to access CentralWidget in create_group", flush=True)
-        central_widget = root.central_widget
-        if central_widget is None:
-            print("Central widget is not available.", flush=True)
-            return
-        print("CentralWidget accessed successfully in create_group", flush=True)
-
-    # Prompt for group name
-        group_name, ok = QInputDialog.getText(root, "Group Name", "Enter the group name:")
-        if ok and group_name:
-                  # Ensure central_widget is still valid
-            if not central_widget:
-                print("Central widget reference is lost before creating group", flush=True)
-                return
-            
-            print("Creating group frame", flush=True)
-            
-            # Create a new frame for the group
-            group_frame = QFrame()  # Use the central widget as the parent
-            group_frame.setFrameShape(QFrame.Box)
-            group_frame.setFixedSize(280, 150)  # Example fixed size
-            group_frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-            # Create a layout for the group frame
-            group_layout = QVBoxLayout(group_frame)
-            group_layout.setContentsMargins(10, 5, 10, 5)  # Left, Top, Right, Bottom margins
-
-            # Create the label for the group
-            group_label = GradientLabel(group_name)
-            group_label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-            group_label.setStyleSheet("""
-                background-color: rgba(76, 175, 80, 150);  /* Green background color with 150/255 transparency */
-                border: 1px solid #2E7D32;  /* Dark green border */
-                padding: 4px;               /* Padding around the text */
-                font-weight: bold;          /* Bold font */
-                color: white;               /* White text color */
-            """)
-            group_label.adjustSize()
-            group_layout.addWidget(group_label, alignment=Qt.AlignTop)
-
-            # Right-click menu for the group
-            group_frame.setContextMenuPolicy(Qt.CustomContextMenu)
-            group_frame.customContextMenuRequested.connect(lambda pos: show_group_menu(pos, group_frame, group_layout, root))
-
-            # Add the group frame to the central widget's layout
-            row = root.central_widget.layout.rowCount()
-            col = 0  # This can be adjusted based on your layout needs
-            root.central_widget.add_widget(group_frame, row, col)
-
-    def show_group_menu(pos, group_frame, group_layout, root):
-        menu = QMenu()
-
-        add_task_action = QAction("Create Task")
-        add_task_action.triggered.connect(lambda: create_task(group_layout, group_frame)) 
-        menu.addAction(add_task_action)
-
-        delete_group_action = QAction("Delete Group")
-        delete_group_action.triggered.connect(lambda: delete_group(group_frame, root))
-        menu.addAction(delete_group_action)
-
-        menu.exec_(group_frame.mapToGlobal(pos))
-
-    #def add_task(group_layout, group_frame, root):
-    def create_task(group_layout, group_frame, task_name=None, task_checked=False):
-        # Prompt for task name
-        task_name, ok = QInputDialog.getText(root, "Task Name", "Enter the task name:")
-        if ok and task_name:
-            # Create a new horizontal layout for the task
-            task_layout = QHBoxLayout()  # Ensure this is a new layout every time
-
-            # Create a checkbox and label for the task
-            task_checkbox = QCheckBox()
-            task_label = QLabel(task_name)
-
-            # Connect checkbox to change label color when checked
-            task_checkbox.stateChanged.connect(lambda: toggle_task_color(task_checkbox, task_label))
-
-            # Add the checkbox and label to the task layout
-            task_layout.addWidget(task_checkbox)
-            task_layout.addWidget(task_label)
-
-            # Right-click menu for the task
-            task_label.setContextMenuPolicy(Qt.CustomContextMenu)
-            task_label.customContextMenuRequested.connect(lambda pos: show_task_menu(pos, task_layout, group_layout, group_frame, root))
-
-            # Add the task layout to the group
-            group_layout.addLayout(task_layout)  # Add the new layout to the group
-
-    def show_task_menu(pos, task_layout, group_layout, group_frame, root):
-        menu = QMenu()
-
-        add_task_action = QAction("Add Task")
-        add_task_action.triggered.connect(lambda: create_task(group_layout, group_frame))
-        menu.addAction(add_task_action)
-
-        remove_task_action = QAction("Remove Task")
-        remove_task_action.triggered.connect(lambda: remove_task(task_layout, group_layout))
-        menu.addAction(remove_task_action)
-
-        delete_group_action = QAction("Delete Group")
-        delete_group_action.triggered.connect(lambda: delete_group(group_frame, root))
-        menu.addAction(delete_group_action)
-
-        menu.exec_(task_layout.parentWidget().mapToGlobal(pos))
-
-    def delete_group(group_frame, root):
-        # Remove the group frame from the main window
-        root.centralWidget().layout().removeWidget(group_frame)
-        group_frame.deleteLater()
-
-    def remove_task(task_layout, group_layout):
-        # Remove the task layout from the group
-        group_layout.removeItem(task_layout)
-        for i in reversed(range(task_layout.count())):
-            widget = task_layout.itemAt(i).widget()
-            if widget is not None:
-                widget.deleteLater()
-
-    def toggle_task_color(checkbox, label):
-        if checkbox.isChecked():
-            label.setStyleSheet("color: green;")
-        else:
-            label.setStyleSheet("") # Reset to default color
 
 
 #FIX IT AFTER MOVING GROUPS OUT OF CREATE MENU
@@ -447,114 +711,4 @@ def extract_groups_and_tasks(root):
                     tasks.append({"label": task_label.text(), "checked": task_checked})
                 
             groups_data.append({"group_name": group_name, "tasks": tasks})
-    return groups_data                 
-
-
-
-"""
-    def create_group(root):
-        # Prompt for group name
-        group_name, ok = QInputDialog.getText(root, "Group Name", "Enter the group name:")
-        if ok and group_name:
-            # Create a new frame for the group
-            group_frame = QFrame(root.centralWidget())
-            group_frame.setFrameShape(QFrame.Box)
-            group_frame.setFixedSize(280, 150)  # Example fixed size
-            group_frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-            print(group_frame.width(), group_frame.height(),flush=True)
-            #group_frame.setFixedSize(relative_width, relative_height)
-            group_layout = QVBoxLayout(group_frame)
-
-            # Set a small top margin to reduce the distance between label and top of group frame
-            group_layout.setContentsMargins(10, 5, 10, 5)  # Left, Top, Right, Bottom margins
-
-            # Create a separate widget for the label
-            label_widget = QWidget()
-            label_layout = QVBoxLayout(label_widget)
-            label_layout.setContentsMargins(0, 0, 0, 0)  # Remove margins for the label
-            # Set a fixed height for the label widget
-           # label_widget.setFixedHeight(30)  # Example: height = 50 pixels
-
-            # Create the label for the group
-            group_label = GradientLabel(group_name) #QLabel(group_name)
-            group_label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-            # Set a green background and other styles for the label
-           # group_label.setStyleSheet(
-           #     background-color: rgba(76, 175, 80, 150);  /* Green background color with 150/255 transparency */
-           #     border: 1px solid #2E7D32;  /* Dark green border */
-           #     padding: 4px;               /* Padding around the text */
-          #      font-weight: bold;          /* Bold font */
-           #     color: white;               /* White text color */
-            )
-
-            # Adjust the width of the label to fit the text
-            group_label.adjustSize()
-            label_layout.addWidget(group_label)
-            # Add the label widget to the group layout, anchored to the top
-            group_layout.addWidget(label_widget, alignment=Qt.AlignTop)
-
-            # Right-click menu for the group
-            group_frame.setContextMenuPolicy(Qt.CustomContextMenu)
-            group_frame.customContextMenuRequested.connect(lambda pos: show_group_menu(pos, group_frame, group_layout, root))
-
-            # Add the group to the central widget's layout
-            root.centralWidget().layout().addWidget(group_frame)
-"""
-
-"""
-def add_task(group_layout):
-    # Prompt the user for a task name
-    task_name, ok = QInputDialog.getText(None, "Input", "Enter task name:")
-    
-    if ok and task_name:
-        # Create a horizontal layout for the task
-        task_layout = QHBoxLayout()
-        
-        # Create a checkbox and label for the task
-        task_checkbox = QCheckBox()
-        task_label = QLabel(task_name)
-        
-        # Add the checkbox and label to the task layout
-        task_layout.addWidget(task_checkbox)
-        task_layout.addWidget(task_label)
-        
-        # Add the task layout to the group
-        group_layout.addLayout(task_layout)
-
-def create_group(root):
-    def _create_group(event=None):
-        group_name = QInputDialog.getText("Input", "Enter group name:")
-        if group_name:
-            frame = QFrame(root, borderwidth=2, relief="solid")
-            frame.setLayout(fill="x", pady=5)
-            label = QLabel(frame, text=group_name, font=("Helvetica", 14), anchor="w")
-            label.setLayout(side="left", fill="x", expand=True)
-            label.bind("<Button-3>", lambda e, f=frame: show_group_menu(root, e, f))
-            frame.bind("<Button-3>", lambda e, f=frame: show_group_menu(root, e, f))
-
-    return _create_group
-
-def show_group_menu(root, event, frame):
-    group_menu = Menu(root, tearoff=0)
-    group_menu.add_command(label="Add Task", command=lambda: add_task(frame))
-    group_menu.add_command(label="Delete Group", command=lambda: frame.destroy())
-    group_menu.post(event.x_root, event.y_root)
-
-def add_task(frame):
-    task_name = QInputDialog.getText("Input", "Enter task name:")
-    if task_name:
-        task_frame = QFrame(frame)
-        task_frame.setLayout(fill="x", pady=2)
-        var = int
-        checkbox = QCheckBox(task_frame, text=task_name, variable=var,
-                                  onvalue=1, offvalue=0,
-                                  command=lambda: mark_task_complete(var, checkbox))
-        checkbox.setLayout(side="left")
-
-def mark_task_complete(var, checkbox):
-    if var.get() == 1:
-        checkbox.config(fg="green")
-    else:
-        checkbox.config(fg="black")   
-
-"""
+    return groups_data

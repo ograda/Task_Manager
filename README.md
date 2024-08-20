@@ -1,37 +1,43 @@
 # Task Management Application
 
-This is a simple task management application built using Python and Tkinter.  
-Goal is to be fully functional, calendar and database integration.
-Also a heap map of ativities to track daily routine and gamify the process (separate version?)
+This is a simple task management application built using Python and Pyside6.  
+Goal is to be fully functional, calendar and database integration plus a map of tasks completed over time.  
+A heap map of ativities to track daily routine and gamify the process (separate version?)  
 
 
 ## Features
 
-- **[BUGGE/PARTIALLY]** **save settingss**: save and load settings on close/open application
-- **[INPROGRESS]** **groups and subtasks**: working flawless groups and subtasks (v2)
-- **Help**: created help info on menu
-- **added groups and subtasks**: Added a basic group and tasks system.
-- **[TODO]** **DBCONNECTION**: placeholder
-- **Calendar**: working calendar - library
-- **Minimize to tray**: added a minimize to tray functionality instead of closing application on close menu
-- **Toggle fullscreen**: The application resize to the hole screen (not native full screen) and back to the original size - only works on first monitor
-- **Ovelay**: The application has the option to stay always on top
-- **[REVIEW]** **Move and Resize**: The application has a module to move and resize 
-- **Menu**: added a top menu to open an options window with some basic functionalities
-- **Close Application**: A button to close/minimize the application.
-- **Blank Window**: A basic window is set up using Tkinter.
+- **structure list**: added a new folder to put structure used in a reduced testing version so its easier to implement on other functions  
+- **[INPROGRESS]** **List of groups**: how should i name this? basic functionality and custom frame added, options adjusted but havent been properly implemented  
+- **rename groups**: rename the group (this should not be added for tasks since they are the end point but maybe in a future release?  
+- **[INPROGRESS]** **groups and subtasks**: working flawless groups and subtasks, adds and swaps (v3) - Missing subtasks swap, bind the move group only on its title?  
+- **[TODO]** **DBCONNECTION**: placeholder  
+- **[BUGGE/PARTIALLY]** **save settingss**: save and load settings on close/open application  
+- **Help**: created help info on menu  
+- **added groups and subtasks**: Added a basic group and tasks system.  
+- **Calendar**: working calendar - library  
+- **Minimize to tray**: added a minimize to tray functionality instead of closing application on close menu  
+- **Toggle fullscreen**: The application resize to the hole screen (not native full screen) and back to the original size - only works on first monitor  
+- **Ovelay**: The application has the option to stay always on top  
+- **Move and Resize**: The application has a module to move and resize  
+- **Menu**: added a top menu to open an options window with some basic functionalities  
+- **Close Application**: A button to close/minimize the application.  
+- **Blank Window**: A basic window is set up using Pyside6.  
 
 
 ## Known Bugs and TODO functions
 
-- [REVIEW] snap screen adaptation
-- [TODO] Db management and connection -> tasks and groups
-- [BUGGED] start saving tasks organize the data that should be saved?
-- [REVIEW] review code and reorganize the functions
-- [TODO] correct the buttons and UI positions 
-- [TODO] start recreating the interface with custom icons
-- [TODO-DIF REVISION] define the size of task blocks, task blocks "infinite" size with rolling scroll 
-- [TODO-DIF REVISION] define the minimum size and aspect ratio for the tasks
+- [BUGGED] removed group to clear the uid?  
+- [TODO] add a resizeable group frame working with the grid and dragable swaps  (this should be a hard function since we must account for dinamic line sizes in the grid, fix it by the msot height in the row?)  
+- [TODO] dragable tasks (we already have dragable group struture, but we might need tasks also)  
+- [TODO-DIF REVISION] implement an executable and add on big flag versions (0.0.5 or 1.0.0 ?)  
+- [TODO] Db management and connection -> tasks and groups  
+- [BUGGED] start saving tasks organize the data that should be saved?  
+- [WIP] review code and reorganize the functions  
+- [WIP] correct the buttons and UI positions  
+- [TODO] start recreating the interface with custom icons  
+- [WIP] define the size of task blocks, task blocks "infinite" size with rolling scroll  
+- [TODO-DIF REVISION] define the minimum size and aspect ratio for the tasks  
 
 ## Version Control
 

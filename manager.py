@@ -1,7 +1,7 @@
 
 from PySide6.QtWidgets import QApplication
 from config import load_settings
-from ui_components import TaskManagerMainWindow, create_menu, create_main_window, apply_groups_and_tasks
+from ui_components import TaskManagerMainWindow, setup_main_window, apply_groups_and_tasks
 from event_handlers import close_event_handler
 
 def main():
@@ -17,11 +17,8 @@ def main():
     settings = load_settings()
 
     # Create/Set up the main window
-    create_main_window(root, settings)
+    setup_main_window(root, settings)
 
-#OGRADAAAAAAAAAAAAAAAA
-    # Set up the menu -- THIS CHANGED INTO A CLASS ON UI COMPONENTS, MANAGING ONLY THE GROUP ACTIONS FOR NOW.
-    create_menu(root)
     
 #OGRADAAAAAAAAAAAAAAAA
     # Apply saved groups and tasks -- BUGGED
