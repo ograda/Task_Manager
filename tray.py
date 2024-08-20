@@ -1,4 +1,3 @@
-
 from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication
 from PySide6.QtGui import QAction, QIcon
 from utils import get_icon_path

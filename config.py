@@ -1,4 +1,3 @@
-
 import json
 import os
 from PySide6.QtCore import Qt

@@ -1,6 +1,6 @@
-from PySide6.QtWidgets import QWidget, QScrollArea, QMainWindow, QApplication, QLabel, QVBoxLayout, QFrame, QMenu, QCheckBox, QInputDialog, QHBoxLayout, QComboBox, QSizePolicy, QPushButton, QGridLayout, QToolBar, QStyle, QStyleOptionComboBox
-from PySide6.QtGui import QAction, QIcon, QRegion, QLinearGradient, QPainter, QColor, QDrag, QDropEvent
-from PySide6.QtCore import Qt,QPoint, QRect, QMimeData, QSize
+from PySide6.QtWidgets import QWidget, QSizeGrip, QScrollArea, QMainWindow, QApplication, QLabel, QVBoxLayout, QFrame, QMenu, QCheckBox, QInputDialog, QHBoxLayout, QComboBox, QSizePolicy, QGridLayout, QToolBar, QStyle, QStyleOptionComboBox
+from PySide6.QtGui import QAction, QIcon, QLinearGradient, QPainter, QColor, QDrag, QDropEvent
+from PySide6.QtCore import Qt,QPoint, QMimeData, QSize
 from event_handlers import  open_calendar, open_settings
 from utils import get_icon_path
 from data_manager import load_groups_and_tasks
@@ -38,10 +38,34 @@ import uuid
         # Set the custom menu bar as the widget's layout
         self.setLayout(layout)
 """
+
+class ResizableWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        # Set up layout
+        layout = QVBoxLayout(self)
+        
+        # Add a label (or your custom content)
+        label = QLabel("Resizable Content", self)
+        layout.addWidget(label)
+        
+        # Add a size grip to the bottom-right corner for resizing
+        size_grip = QSizeGrip(self)
+        layout.addWidget(size_grip, alignment=Qt.AlignBottom | Qt.AlignRight)
+
+        self.setMinimumSize(280, 150)  # Set minimum size
+        self.setMaximumSize(280, 500)  # Set maximum size
+
 #define the task widget and its properties
 class TaskWidget(QFrame):
-    def __init__(self, task_name, parent=None):
+    def __init__(self, task_name, uid, parent=None):
         super().__init__(parent)
+
+        # Store the unique ID
+        self.uid = uid
+        self.setObjectName(self.uid)  # Set the object name to the UID
+
         #self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         #self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)  # Fixed height to control size
@@ -79,8 +103,159 @@ class TaskWidget(QFrame):
             color: red;               /* White text color */ 
         """)
         layout.addWidget(self.label)
+
         # Set a fixed height to match the height of a typical task
         self.setFixedHeight(self.sizeHint().height())
+
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+
+    def mousePressEvent(self, event):
+        #if event.button() == Qt.RightButton:
+            # Trigger the parent context menu for this task
+           # self.parentWidget().parentWidget().show_context_menu(event.pos())
+        if event.button() == Qt.LeftButton:
+            drag = QDrag(self)
+            mime_data = QMimeData()
+
+            # Store the widget's UID in the mime data
+            mime_data.setText(self.uid)
+            drag.setMimeData(mime_data)
+
+            # Create a visual representation for dragging
+            pixmap = self.grab()  # Grabs an image of the widget
+            drag.setPixmap(pixmap)
+            drag.setHotSpot(event.pos())  # Adjust hotspot to the click position
+            drag.exec(Qt.MoveAction)
+        else:
+            super().mousePressEvent(event)
+
+
+    def show_context_menu(self, pos: QPoint):
+        menu = QMenu(self)
+
+        delete_task_action = QAction("Delete Task", self)
+        delete_task_action.triggered.connect(lambda: self.delete_task())
+        menu.addAction(delete_task_action)
+
+        menu.exec(self.mapToGlobal(pos))
+
+    def delete_task(self):
+        """Remove this task from the parent layout and delete it."""
+        parent_layout = self.parentWidget().layout()
+        parent_layout.removeWidget(self)
+        self.deleteLater()
+"""
+        def mousePressEvent(self, event):
+            print(f"entering mouse press event on taskwidget: {self.uid}", flush=True)
+            if event.button() == Qt.RightButton:
+                print(f"Right-click detected on TaskWidget: {self.uid}", flush=True)
+                # Trigger the parent context menu for this task
+                self.parentWidget().parentWidget().show_context_menu(event.pos())
+            elif event.button() == Qt.LeftButton:
+                drag = QDrag(self)
+                mime_data = QMimeData()
+
+                # Store the widget's UID in the mime data
+                mime_data.setText(self.uid)
+                drag.setMimeData(mime_data)
+
+                # Create a visual representation for dragging
+                pixmap = self.grab()  # Grabs an image of the widget
+                drag.setPixmap(pixmap)
+                drag.setHotSpot(event.pos())  # Adjust hotspot to the click position
+                drag.exec(Qt.MoveAction)
+            else:
+                print(f"Left-click detected on TaskWidget: {self.uid}", flush=True)
+                super().mousePressEvent(event)
+"""
+
+class TaskContainer(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setAcceptDrops(True)
+       # self.setLayout(QVBoxLayout())
+       # self.layout().setContentsMargins(10, 5, 10, 5)
+       # self.layout().setAlignment(Qt.AlignTop)
+
+
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+
+    def show_context_menu(self, pos: QPoint):
+        global_pos = self.mapToGlobal(pos)
+        clicked_widget = self.childAt(pos)
+        menu = QMenu(self)
+
+        # Traverse up the widget hierarchy to find the DraggableFrame
+        parent_widget = self.parentWidget()
+        while parent_widget is not None and not isinstance(parent_widget, DraggableFrame):
+            parent_widget = parent_widget.parentWidget()
+
+        draggable_frame = parent_widget
+
+        if isinstance(draggable_frame, DraggableFrame):
+            if isinstance(clicked_widget, TaskWidget):
+                delete_task_action = QAction("Delete Task", self)
+                delete_task_action.triggered.connect(lambda: self.delete_task(clicked_widget))
+                menu.addAction(delete_task_action)
+
+                add_task_action = QAction("Add Task", self)
+                add_task_action.triggered.connect(draggable_frame.add_task)
+                menu.addAction(add_task_action)
+            else:
+                add_task_action = QAction("Add Task", self)
+                add_task_action.triggered.connect(draggable_frame.add_task)
+                menu.addAction(add_task_action)
+
+            menu.exec(global_pos)
+        else:
+            print("DraggableFrame not found in hierarchy.", flush=True)
+
+    def delete_task(self, task_widget: TaskWidget):
+        """Delete the specified task."""
+        self.layout().removeWidget(task_widget)
+        task_widget.deleteLater()
+        self.update()  # Update the container to adjust layout
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):
+        event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        source_uid = event.mimeData().text()
+        source_widget = self.find_task_widget_by_uid(source_uid)
+        target_widget = self.childAt(event.pos())
+
+        # Find the correct target widget (may be nested inside another widget)
+        while target_widget and not isinstance(target_widget, TaskWidget):
+            target_widget = target_widget.parentWidget()
+
+        if source_widget is None:
+            print("Source widget not found during drop event.")
+            return
+
+        if target_widget is not None and source_widget != target_widget:
+            source_index = self.layout().indexOf(source_widget)
+            target_index = self.layout().indexOf(target_widget)
+
+            # Insert the source widget before the target widget
+            self.layout().insertWidget(target_index, source_widget)
+
+        event.acceptProposedAction()
+
+    def find_task_widget_by_uid(self, uid):
+        """Helper function to find a TaskWidget by its UID."""
+        for i in range(self.layout().count()):
+            widget = self.layout().itemAt(i).widget()
+            if widget and widget.objectName() == uid:
+                return widget
+        return None  
+
 
 #defines a gradient label
 class GradientLabel(QLabel):
@@ -160,7 +335,7 @@ class DraggableFrame(QFrame):
         self.scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
 
         # Create a widget to hold the tasks and set it as the scroll area's widget
-        self.task_container = QWidget()
+        self.task_container = TaskContainer(self)
         self.task_layout = QVBoxLayout(self.task_container)
         self.task_layout.setContentsMargins(10, 5, 10, 5)  # Adjust margins to control spacing
         self.task_layout.setAlignment(Qt.AlignTop)  # Align tasks to the top
@@ -172,15 +347,36 @@ class DraggableFrame(QFrame):
         self.group_label.customContextMenuRequested.connect(self.show_title_context_menu)
 
         # Enable right-click context menu for tasks
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.show_context_menu)
+        #self.setContextMenuPolicy(Qt.CustomContextMenu)
+       # self.customContextMenuRequested.connect(self.show_context_menu)
 
         # Enable dragging
         self.setAcceptDrops(False)
         self.setObjectName(str(self.unique_id))
 
     def show_context_menu(self, pos: QPoint):
-        """Show the context menu for adding or deleting tasks."""
+        global_pos = self.mapToGlobal(pos)
+        clicked_widget = self.childAt(pos)
+
+        # Debugging information
+        print(f"Context menu triggered at position: {pos}, global position: {global_pos}")
+        print(f"Clicked widget: {clicked_widget}")
+
+        if isinstance(clicked_widget, TaskWidget):
+            print(f"Task widget detected: {clicked_widget.uid}")
+            menu = QMenu(self)
+
+            delete_task_action = QAction("Delete Task", self)
+            delete_task_action.triggered.connect(lambda: self.delete_task(clicked_widget))
+            menu.addAction(delete_task_action)
+
+            menu.exec(global_pos)
+        else:
+            print("No task widget found; showing group context menu")
+            self.show_title_context_menu(pos)
+    """ 
+    def show_context_menu(self, pos: QPoint):
+        #Show the context menu for adding or deleting tasks.
         global_pos = self.mapToGlobal(pos)
 
         menu = QMenu(self)
@@ -203,13 +399,20 @@ class DraggableFrame(QFrame):
             menu.addAction(delete_task_action)
 
         menu.exec(global_pos)
-
+    """
     def add_task(self):
         """Add a new task (checkbox) to the group."""
         task_name, ok = QInputDialog.getText(self, "New Task", "Enter task name:")
         if ok and task_name:
-            task_widget = TaskWidget(task_name, self.task_container)
+            unique_id = str(uuid.uuid4())
+            # Create a new TaskWidget and pass the unique ID
+            task_widget = TaskWidget(task_name, unique_id, self.task_container)
             self.task_layout.addWidget(task_widget)
+            print(f"Task {task_name} with UID {unique_id} added to group {self.group_name}", flush=True)
+
+            # Print widget hierarchy
+            print("Widget Hierarchy:", flush=True)
+            print(self.task_container.findChildren(QWidget), flush=True)
         #if ok and task_name:
            # task_checkbox = QCheckBox(task_name, self.task_container)
           #  task_checkbox.setStyleSheet(
@@ -233,6 +436,113 @@ class DraggableFrame(QFrame):
 
             # Adjust the scrollbar range and visibility
            # self.update_scrollbar()
+    """
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+
+    #custumize the drag move event (draging groups #OGRADAAAAAAAAAAAAAAAA)
+    def dragMoveEvent(self, event):
+       event.acceptProposedAction()
+
+    #execute the drag event
+    def dropEvent(self, event: QDropEvent):
+        # Find the widget that was dropped using the unique ID
+        source_widget = self.findChild(DraggableFrame, event.mimeData().text())
+        if not source_widget:
+            return
+
+        # Get the position where the widget is dropped
+        drop_position = event.position().toPoint()
+        target_widget = self.childAt(drop_position)
+
+        # If the drop target is not a DraggableFrame, find the closest DraggableFrame parent
+        while target_widget and not isinstance(target_widget, DraggableFrame):
+            target_widget = target_widget.parentWidget()
+
+        if isinstance(target_widget, DraggableFrame) and target_widget != source_widget:
+            # Swap the source and target widgets
+            source_index = self.layout.indexOf(source_widget)
+            target_index = self.layout.indexOf(target_widget)
+
+            source_row, source_col, _, _ = self.layout.getItemPosition(source_index)
+            target_row, target_col, _, _ = self.layout.getItemPosition(target_index)
+
+            self.layout.addWidget(source_widget, target_row, target_col)
+            self.layout.addWidget(target_widget, source_row, source_col)
+
+        event.acceptProposedAction()
+    """
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            print("Drag enter event accepted.", flush=True)
+            event.acceptProposedAction()
+        else:
+            print("Drag enter event rejected.", flush=True)
+            event.ignore()
+
+    #custumize the drag move event (draging groups #OGRADAAAAAAAAAAAAAAAA)
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasText():
+            print("Drag move event accepted.", flush=True)
+            event.acceptProposedAction()
+        else:
+            print("Drag move event rejected.", flush=True)
+            event.ignore()
+
+    def dropEvent(self, event):
+        print(f"Drop event initiated at position: {event.position().toPoint()}", flush=True)
+
+        # Find the widget that was dropped using the unique ID
+        source_widget = self.findChild(DraggableFrame, event.mimeData().text())
+        if not source_widget:
+            print("Source widget not found during drop event.", flush=True)
+            return
+
+        drop_position = event.position().toPoint()
+        print(f"Drop position: {drop_position}", flush=True)
+
+        # Identify the target widget where the item is being dropped
+        target_widget = self.childAt(drop_position)
+        print(f"Target widget identified at drop position: {target_widget}", flush=True)
+
+        # If the drop target is not a DraggableFrame, find the closest DraggableFrame parent
+        while target_widget and not isinstance(target_widget, DraggableFrame):
+            print(f"Traversing to parent widget: {target_widget.parentWidget()}", flush=True)
+            target_widget = target_widget.parentWidget()
+
+        if isinstance(target_widget, DraggableFrame) and target_widget != source_widget:
+            print(f"Swapping positions between source ({source_widget}) and target ({target_widget}).", flush=True)
+            
+            source_index = self.parent().layout().indexOf(source_widget)
+            target_index = self.parent().layout().indexOf(target_widget)
+
+            print(f"Source index: {source_index}, Target index: {target_index}", flush=True)
+
+            # Get the row and column positions
+            source_row, source_col, _, _ = self.parent().layout().getItemPosition(source_index)
+            target_row, target_col, _, _ = self.parent().layout().getItemPosition(target_index)
+
+            print(f"Source position: (Row: {source_row}, Col: {source_col}), Target position: (Row: {target_row}, Col: {target_col})", flush=True)
+
+            # Swap the widgets
+            self.parent().layout().addWidget(source_widget, target_row, target_col)
+            self.parent().layout().addWidget(target_widget, source_row, source_col)
+        else:
+            print("Drop target is not valid or is the same as the source widget.", flush=True)
+
+        event.acceptProposedAction()
+        print("Drop event completed.", flush=True)
+
+    def find_task_widget_by_uid(self, uid):
+        """Helper function to find a TaskWidget by its UID."""
+        for i in range(self.task_layout.count()):
+            widget = self.task_layout.itemAt(i).widget()
+            if widget and widget.objectName() == uid:
+                return widget
+        return None
+
 
     def delete_task(self, task_widget: QCheckBox):
         """Delete the specified task."""
@@ -276,7 +586,14 @@ class DraggableFrame(QFrame):
         self.deleteLater()
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        clicked_widget = self.childAt(event.pos())
+
+        if isinstance(clicked_widget, TaskWidget):
+            print(f"Forwarding event to TaskWidget: {clicked_widget.uid}")
+            # Forward the event to the TaskWidget
+            clicked_widget.mousePressEvent(event)
+        elif event.button() == Qt.LeftButton and self.group_label.geometry().contains(event.pos()):
+            print(f"Mouse press event on GradientLabel at position: {event.pos()}")
             drag = QDrag(self)
             mime_data = QMimeData()
 
@@ -285,14 +602,18 @@ class DraggableFrame(QFrame):
             drag.setMimeData(mime_data)
 
             # Create a visual representation for dragging
-           # drag.setHotSpot(event.position().toPoint())
-           # drag.exec(Qt.MoveAction)
-
-            # Create a visual representation for dragging
             pixmap = self.grab()  # Grabs an image of the widget
             drag.setPixmap(pixmap)
             drag.setHotSpot(event.pos())  # Adjust hotspot to the click position
             drag.exec(Qt.MoveAction)
+            print("Dragging group initiated")
+        elif event.button() == Qt.RightButton and self.group_label.geometry().contains(event.pos()):
+            print(f"Right-click detected on GradientLabel; triggering context menu")
+            self.show_title_context_menu(event.pos())
+        else:
+            # If the click is not on the GradientLabel or a TaskWidget, propagate it normally
+            print(f"ELSE DRAGGABLEFRAME: ", flush=True)
+            super().mousePressEvent(event)
 
 
 class CustomComboBox(QComboBox):
@@ -465,6 +786,14 @@ class CentralWidget(QWidget):
         self.current_col = 0
         self.max_columns = 3  # Maximum number of columns before wrapping to the next row
 
+        # Add a size grip to the bottom-right corner for resizing
+        #size_grip = QSizeGrip(self)
+      #  self.layout.addWidget(size_grip, alignment=Qt.AlignBottom | Qt.AlignRight)
+        # Add a QSizeGrip to the bottom-right corner for resizing the entire widget
+        size_grip = QSizeGrip(self)
+        self.layout.addWidget(size_grip, self.layout.rowCount(), self.layout.columnCount() - 1, 1, 1, alignment=Qt.AlignBottom | Qt.AlignRight)
+
+
     def prompt_add_group(self):
         group_name, ok = QInputDialog.getText(self, "Group Name", "Enter the group name:")
         if ok and group_name:
@@ -486,13 +815,58 @@ class CentralWidget(QWidget):
             self.current_col = 0
             self.current_row += 1
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.RightButton:
-            self.prompt_add_group()     
-        else:
-            # For other buttons, propagate the event to the parent
-            super().mousePressEvent(event)
 
+    def mousePressEvent(self, event):
+        clicked_widget = self.childAt(event.pos())
+
+        if clicked_widget is None:  # If the click is on the background (no child widget)
+            if event.button() == Qt.RightButton:
+                self.prompt_add_group()
+            else:
+                super().mousePressEvent(event)
+        else:
+            event.ignore()  # Pass the event to the child widget
+
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+
+    #custumize the drag move event (draging groups #OGRADAAAAAAAAAAAAAAAA)
+    def dragMoveEvent(self, event):
+       event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        source_widget = self.findChild(DraggableFrame, event.mimeData().text())
+        if not source_widget:
+            print("Source widget not found during drop event.", flush=True)
+            event.ignore()
+            return
+
+        drop_position = event.position().toPoint()
+        target_widget = self.childAt(drop_position)
+
+        # Ensure target_widget is a valid DraggableFrame
+        while target_widget and not isinstance(target_widget, DraggableFrame):
+            target_widget = target_widget.parentWidget()
+
+        if isinstance(target_widget, DraggableFrame) and target_widget != source_widget:
+            print(f"Dropping on valid target: {target_widget.objectName()}", flush=True)
+            source_index = self.layout.indexOf(source_widget)
+            target_index = self.layout.indexOf(target_widget)
+
+            source_row, source_col, _, _ = self.layout.getItemPosition(source_index)
+            target_row, target_col, _, _ = self.layout.getItemPosition(target_index)
+
+            self.layout.addWidget(source_widget, target_row, target_col)
+            self.layout.addWidget(target_widget, source_row, source_col)
+
+            event.acceptProposedAction()
+        else:
+            print("Invalid drop target or same as source.", flush=True)
+            event.ignore()
+
+    """
     def dragEnterEvent(self, event):
         if event.mimeData().hasText():
             event.acceptProposedAction()
@@ -528,7 +902,7 @@ class CentralWidget(QWidget):
             self.layout.addWidget(target_widget, source_row, source_col)
 
         event.acceptProposedAction()
-
+    """
     #update the grid layout (rearrange the grid layout based on the current max_columns setting)
     def update_grid_layout(self):
         """Rearrange the grid layout based on the current max_columns setting."""

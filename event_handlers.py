@@ -1,4 +1,3 @@
-
 from PySide6.QtWidgets import QCalendarWidget, QLabel, QVBoxLayout, QCheckBox, QDialog, QPushButton, QHBoxLayout
 from PySide6.QtCore import Qt
 from tray import minimize_to_tray
