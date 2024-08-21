@@ -34,10 +34,3 @@ def on_tray_icon_activated(reason, root, tray_icon):
 def restore_from_tray(root, tray_icon):
     tray_icon.hide()
     root.show()
-    
-#def close_event_handler(event, root, settings):
- #   if settings.get("minimize_to_tray", False):
- #       event.ignore()
- #       minimize_to_tray(root)
- #   else:
- #       event.accept()

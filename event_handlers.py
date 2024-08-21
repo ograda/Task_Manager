@@ -1,14 +1,12 @@
 from PySide6.QtWidgets import QCalendarWidget, QLabel, QVBoxLayout, QCheckBox, QDialog, QPushButton, QHBoxLayout
 from PySide6.QtCore import Qt
 from tray import minimize_to_tray
-from config import save_current_settings, save_settings
-#from data_manager import save_groups_and_tasks
+from config import save_current_settings, save_settings, save_groups_and_tasks
 
-# Handle window closing event -- MOVE TO TRAY
-def close_event_handler(event, root, settings):
+def close_event_handler(event, root, settings, groups_data):
     # Save the current settings and groups/tasks
     save_current_settings(root, settings)
-   # save_groups_and_tasks(root)
+    save_groups_and_tasks(groups_data)
     if settings.get("minimize_to_tray", False):
         event.ignore()
         minimize_to_tray(root)
