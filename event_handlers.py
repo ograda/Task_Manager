@@ -3,10 +3,10 @@ from PySide6.QtCore import Qt
 from tray import minimize_to_tray
 from config import save_current_settings, save_settings, save_groups_and_tasks
 
-def close_event_handler(event, root, settings, groups_data):
+def close_event_handler(event, root, settings, groups_data, current_group):
     # Save the current settings and groups/tasks
     save_current_settings(root, settings)
-    save_groups_and_tasks(groups_data)
+    save_groups_and_tasks(groups_data, current_group)
     if settings.get("minimize_to_tray", False):
         event.ignore()
         minimize_to_tray(root)

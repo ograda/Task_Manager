@@ -1,0 +1,72 @@
+{
+    "groups": [
+        {
+            "group_id": 0,
+            "name": "Novo",
+            "active": true,
+            "lists": []
+        },
+        {
+            "group_id": 1,
+            "name": "tef",
+            "active": false,
+            "lists": [
+                {
+                    "name": "Unnamed List",
+                    "position": 0,
+                    "tasks": [
+                        {
+                            "name": "rarara",
+                            "checked": false
+                        },
+                        {
+                            "name": "vcxcvb",
+                            "checked": false
+                        }
+                    ]
+                },
+                {
+                    "name": "Unnamed List",
+                    "position": 0,
+                    "tasks": [
+                        {
+                            "name": "hnbcvnbvger",
+                            "checked": true
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "group_id": 2,
+            "name": "erc",
+            "active": false,
+            "lists": [
+                {
+                    "name": "Unnamed List",
+                    "position": 0,
+                    "tasks": [
+                        {
+                            "name": "rwahbv",
+                            "checked": false
+                        },
+                        {
+                            "name": "cxc",
+                            "checked": false
+                        }
+                    ]
+                },
+                {
+                    "name": "Unnamed List",
+                    "position": 0,
+                    "tasks": [
+                        {
+                            "name": "hjhjhjhjhjhjr",
+                            "checked": true
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

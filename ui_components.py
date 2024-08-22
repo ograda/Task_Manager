@@ -215,33 +215,33 @@ class GradientLabel(QLabel):
         painter.end() 
 
 # create the group frame class with tasks and its functions
-class GroupOfTaks(QFrame):
-    def __init__(self, group_name, unique_id, parent=None):
+class ListOfTaks(QFrame):
+    def __init__(self, list_name, unique_id, parent=None):
         super().__init__(parent)
         self.setFrameShape(QFrame.Box)
         self.setFixedSize(280, 150)  # Example fixed size
         self.setMinimumFrameHeight = 150  # Initial height
         self.setMaximumFrameHeight = 500 # Maximum height
         self.unique_id = unique_id #identification of the groupobject
-        self.group_name = group_name # Store the group name
+        self.list_name = list_name # Store the group name
 
         # Create a layout for the group frame
-        self.group_layout = QVBoxLayout(self)
-        self.group_layout.setContentsMargins(10, 5, 10, 5)  # Left, Top, Right, Bottom margins
-        self.group_layout.setAlignment(Qt.AlignTop)  # Align tasks to the top
+        self.list_layout = QVBoxLayout(self)
+        self.list_layout.setContentsMargins(10, 5, 10, 5)  # Left, Top, Right, Bottom margins
+        self.list_layout.setAlignment(Qt.AlignTop)  # Align tasks to the top
 
         # Create the label for the group
-        self.group_label = GradientLabel(group_name, self)
-        self.group_label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        self.group_label.setStyleSheet("""
+        self.list_label = GradientLabel(list_name, self)
+        self.list_label.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+        self.list_label.setStyleSheet("""
             background-color: rgba(76, 175, 80, 150);  /* Green background color with 150/255 transparency */
             border: 1px solid #2E7D32;  /* Dark green border */
             padding: 4px;               /* Padding around the text */
             font-weight: bold;          /* Bold font */
             color: white;               /* White text color */
         """)
-        self.group_label.adjustSize()
-        self.group_layout.addWidget(self.group_label, alignment=Qt.AlignTop)
+        self.list_label.adjustSize()
+        self.list_layout.addWidget(self.list_label, alignment=Qt.AlignTop)
         
         # Add scroll area for tasks with an invisible background
         self.scroll_area = QScrollArea(self)
@@ -252,11 +252,11 @@ class GroupOfTaks(QFrame):
         # Create a widget to hold the tasks and set it as the scroll area's widget
         self.task_container = TaskContainer(self)
         self.scroll_area.setWidget(self.task_container)
-        self.group_layout.addWidget(self.scroll_area)
+        self.list_layout.addWidget(self.scroll_area)
 
         # Connect right-click menu for the group label (title)
-        self.group_label.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.group_label.customContextMenuRequested.connect(self.show_title_context_menu)
+        self.list_label.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.list_label.customContextMenuRequested.connect(self.show_title_context_menu)
 
         # Enable dragging
         self.setAcceptDrops(True)
@@ -270,14 +270,14 @@ class GroupOfTaks(QFrame):
 
     # Show the context menu for renaming or deleting the group (clicking inside the group label/gradient laberl)
     def show_title_context_menu(self, pos: QPoint):
-        global_pos = self.group_label.mapToGlobal(pos)
+        global_pos = self.list_label.mapToGlobal(pos)
 
         menu = QMenu(self)
-        rename_action = QAction("Rename Group", self)
-        delete_action = QAction("Delete Group", self)
+        rename_action = QAction("Rename List", self)
+        delete_action = QAction("Delete List", self)
 
-        rename_action.triggered.connect(self.rename_group)
-        delete_action.triggered.connect(self.delete_group)
+        rename_action.triggered.connect(self.rename_list)
+        delete_action.triggered.connect(self.delete_list)
 
         menu.addAction(rename_action)
         menu.addAction(delete_action)
@@ -285,14 +285,14 @@ class GroupOfTaks(QFrame):
         menu.exec(global_pos)
 
     # Rename this group
-    def rename_group(self):
-        new_name, ok = QInputDialog.getText(self, "Rename Group", "Enter new group name:", text=self.group_name)
+    def rename_list(self):
+        new_name, ok = QInputDialog.getText(self, "Rename List", "Enter new list name:", text=self.list_name)
         if ok and new_name:
-            self.group_name = new_name
-            self.group_label.setText(new_name)
+            self.list_name = new_name
+            self.list_label.setText(new_name)
 
     # Delete the group
-    def delete_group(self):
+    def delete_list(self):
         self.setParent(None)
         self.deleteLater()
 
@@ -310,7 +310,7 @@ class GroupOfTaks(QFrame):
                 self._drag_start_position = event.position().toPoint()
                 self._initial_height = self.height()
                 event.accept()
-            elif self.group_label.geometry().contains(event.position().toPoint()):
+            elif self.list_label.geometry().contains(event.position().toPoint()):
                 print(f"Mouse press event on GradientLabel at position: {event.position().toPoint()}", flush=True)
                 drag = QDrag(self)
                 mime_data = QMimeData()
@@ -325,7 +325,7 @@ class GroupOfTaks(QFrame):
                 drag.setHotSpot(event.position().toPoint())  # Adjust hotspot to the click position
                 drag.exec(Qt.MoveAction)
                 print("Dragging group initiated", flush=True)
-        elif event.button() == Qt.RightButton and self.group_label.geometry().contains(event.position().toPoint()):
+        elif event.button() == Qt.RightButton and self.list_label.geometry().contains(event.position().toPoint()):
             print(f"Right-click detected on GradientLabel; triggering context menu", flush=True)
             self.show_title_context_menu(event.position().toPoint())
         else:
@@ -364,13 +364,11 @@ class GroupOfTaks(QFrame):
 
 
 
-#OGRADAAAAAAAAAAAAAAAA
-#OGRADAAAAAAAAAAAAAAAA
-#OGRADAAAAAAAAAAAAAAAA
+# Manage the group of taks (create, delete, rename) -- still need the proper save/load functions
 class CustomComboBox(QComboBox):
     def __init__(self, parent=None):
         super().__init__(parent)
-
+        self.previous_index = self.currentIndex()  # Initialize the previous index
         self.setStyleSheet("""
             QComboBox {
                 padding: 2px;                   /* Padding inside the combo box */
@@ -410,54 +408,150 @@ class CustomComboBox(QComboBox):
         # End the painter to avoid QBackingStore errors
         painter.end()
 
+    # Center align the text of each item in the drop-down menu
     def showPopup(self):
-        # Center align the text of each item in the drop-down menu
         for i in range(self.count()):
             self.setItemData(i, Qt.AlignCenter, Qt.TextAlignmentRole)
         super().showPopup()
 
-#OGRADAAAAAAAAAAAAAAAA
+
+    def export_all_groups_data(self):
+        groups_data = []
+        for index in range(self.count()):
+            group_info = {
+                "group_id": index,
+                "name": self.itemText(index),
+                "active": index == self.currentIndex()
+            }
+            groups_data.append(group_info)
+
+        return groups_data
+    
+    def handle_group_swap(self):
+        # Get the old group name and index
+        old_index = self.previous_index
+
+        # Get the new group name and index
+        new_index = self.currentIndex()
+
+        # Update the previous index to the new index after the swap
+        self.previous_index = new_index
+        return old_index, new_index
+        
+        """Handle the group swap event by updating the group data and UI
+        # Export the current group's data
+        current_index, current_name, _ = self.get_current_info()
+        current_group_data = self.parent().central_widget.export_lists()  # Export the current group's lists
+
+        # Update the current group in the data
+        group_manager.update_group_data(current_index, current_name, current_group_data)
+
+        # Set the current group as inactive
+        group_manager.set_group_inactive(current_index)
+
+        # Set the new selected group as active
+        new_active_index = self.currentIndex()
+        group_manager.set_group_active(new_active_index)
+
+        # Load the new active group's data into the UI
+        new_active_group_data = group_manager.groups[new_active_index].lists
+        self.parent().central_widget.import_groups(new_active_group_data)
+    """	
+    def get_current_info(self):
+        # Get the current index
+        current_index = self.currentIndex()
+
+        # Get the current text
+        current_text = self.currentText()
+
+        # Optional: Get data associated with the current item (if you set it using setItemData)
+        current_data = self.itemData(current_index)
+
+        # Return the information
+        return current_index, current_text, current_data
+
+    def addItem(self, group_name, uid=None):
+        if uid is None:
+            uid = str(uuid.uuid4())  # Generate a UID if not provided
+
+        super().addItem(group_name)  # Call the base class method to add the item
+        self.setItemData(self.count() - 1, uid)  # Store the UID as item data
+        if self.count() == 1:
+            self.previous_index = self.currentIndex()  # Initialize the previous index
+        return uid  # Optionally return the UID if you need it elsewhere   
+
+    def add_group(self):
+        new_group_name, ok = QInputDialog.getText(self, "Add Group", "Enter new group name:")
+        if ok and new_group_name:
+            self.addItem(new_group_name)
+
+    def remove_selected_group(self):
+        current_index = self.currentIndex()
+        if current_index >= 0:
+            self.removeItem(current_index)
+
+    def rename_selected_group(self):
+        current_index = self.currentIndex()
+        if current_index >= 0:
+            current_text = self.currentText()
+            new_group_name, ok = QInputDialog.getText(self, "Rename Group", "Enter new group name:", text=current_text)
+            if ok and new_group_name:
+                self.setItemText(current_index, new_group_name)
+
+  #  def get_active_group(self, groups_data):
+      #  for group in groups_data["groups"]:
+       #     if group["active"]:
+      #          return group
+      #  return self.currentIndex()  # If no group is active, return None
+
+ #   def populate_group_selector(top_toolbar, groups_data):
+     #   top_toolbar.group_selector.clear()  # Clear any existing items
+      #  for group in groups_data["groups"]:
+       #     top_toolbar.group_selector.addItem(group["name"], group["group_id"]) 
+
+    def load_and_activate_lists(self, groups_data):
+        self.clear()  # Clear any existing items
+        active_group = None
+
+        for index, group in enumerate(groups_data.groups):
+            self.addItem(group.name, group.group_id)
+            if group.active:
+                active_group = group
+                self.setCurrentIndex(index)  # Set the combo box to the active group
+
+        # If no group is marked as active, return the group associated with the current index
+        if not active_group:
+            active_index = self.currentIndex()
+            active_group = groups_data.groups[active_index] if active_index != -1 else None
+
+        return active_group
+
     #manage the lists -- create list, delete list, rename list 
     def showContextMenu(self, position):
-        # Create the context menu
         menu = QMenu(self)
 
-        # Add actions to the menu
-        option_one = QAction("Option One", self)
-        option_two = QAction("Option Two", self)
-        option_three = QAction("Option Three", self)
+        add_group = QAction("Create Group", self)
+        add_group.triggered.connect(self.add_group)
+        menu.addAction(add_group)
 
-        # Connect actions to their respective handlers
-        option_one.triggered.connect(self.optionOneSelected)
-        option_two.triggered.connect(self.optionTwoSelected)
-        option_three.triggered.connect(self.optionThreeSelected)
+        rename_group = QAction("Rename Group", self)
+        rename_group.triggered.connect(self.rename_selected_group)
+        menu.addAction(rename_group)
 
-        # Add actions to the context menu
-        menu.addAction(option_one)
-        menu.addAction(option_two)
-        menu.addAction(option_three)
+        # Should we let the user delete the last group?
+        if self.count() > 1:
+            remove_group = QAction("Remove Group", self)
+            remove_group.triggered.connect(self.remove_selected_group)
+            menu.addAction(remove_group)
 
         # Show the context menu at the position of the right-click
         menu.exec(self.mapToGlobal(position))
 
-    def optionOneSelected(self):
-        print("Option One selected", flush=True)
-
-    def optionTwoSelected(self):
-        print("Option Two selected", flush=True)
-
-    def optionThreeSelected(self):
-        print("Option Three selected", flush=True)   
-
+    # Handle the mouse events to override the right-click context menu
     def mousePressEvent(self, event):
         if event.button() == Qt.RightButton:
-            # create the management Lists menu
-            self.showContextMenu(event.pos())
-     #   elif event.button() == Qt.LeftButton:
-            # Do something else with the left mouse button
-         #   self.showPopup()
+            self.showContextMenu(event.position().toPoint())
         else:
-            # Default behavior for other buttons
             super().mousePressEvent(event)
 
 
@@ -480,9 +574,9 @@ class CustomTopMenuBar(QToolBar):
         self.addWidget(spacer_left)
 
         # Add group selector to the toolbar (center-aligned)
-        group_selector = CustomComboBox(self)
-        group_selector.addItems(["Group 1", "Group 2", "Group 3"])
-        self.addWidget(group_selector)
+        self.group_selector = CustomComboBox(self)
+        self.addWidget(self.group_selector)
+
 
         # Add a spacer to push the remaining items to the right
         spacer_right = QWidget(self)
@@ -491,6 +585,10 @@ class CustomTopMenuBar(QToolBar):
 
     # Disable the event filter for the context menu
         self.installEventFilter(self)
+
+    def getActiveGroup(self):
+        return self.group_selector.currentIndex()
+
     def eventFilter(self, source, event):
         if event.type() == QEvent.ContextMenu:
             return True  # Block context menu event
@@ -558,33 +656,33 @@ class CentralWidget(QWidget):
         self.max_columns = 3  # Maximum number of columns before wrapping to the next row
 
     # send the create group event
-    def prompt_add_group(self):
-        group_name, ok = QInputDialog.getText(self, "Group Name", "Enter the group name:")
-        if ok and group_name:
-            self.add_group(group_name)
+    def prompt_add_list(self):
+        list_name, ok = QInputDialog.getText(self, "List Name", "Enter the list name:")
+        if ok and list_name:
+            self.add_list(list_name)
 
     # Add a new group of tasks to the grid layout
-    def add_group(self, group_name, returning=False):
+    def add_list(self, list_name, returning=False):
         # Generate a unique ID for each group
         unique_id = uuid.uuid4()
         # Create a new draggable frame for the group
-        group_frame = GroupOfTaks(group_name, unique_id, self)
+        list_frame = ListOfTaks(list_name, unique_id, self)
         # Add the group frame to the grid layout at the current position
-        self.layout.addWidget(group_frame, self.current_row, self.current_col)
+        self.layout.addWidget(list_frame, self.current_row, self.current_col)
         # Update column and row for the next widget
         self.current_col += 1
         if self.current_col >= self.max_columns:
             self.current_col = 0
             self.current_row += 1
         if returning:
-            return group_frame
+            return list_frame
 
     # Manage the Mouse Press Event (right click create a new group of tasks)
     def mousePressEvent(self, event):
         clicked_widget = self.childAt(event.pos())
         if clicked_widget is None:  # If the click is on the background (no child widget)
             if event.button() == Qt.RightButton:
-                self.prompt_add_group()
+                self.prompt_add_list()
             else:
                 super().mousePressEvent(event)
         else:
@@ -607,7 +705,7 @@ class CentralWidget(QWidget):
     #execute the drag event
     def dropEvent(self, event: QDropEvent):
         # Find the widget that was dropped using the unique ID
-        source_widget = self.findChild(GroupOfTaks, event.mimeData().text())
+        source_widget = self.findChild(ListOfTaks, event.mimeData().text())
         if not source_widget:
             return
 
@@ -616,10 +714,10 @@ class CentralWidget(QWidget):
         target_widget = self.childAt(drop_position)
 
         # If the drop target is not a DraggableFrame, find the closest DraggableFrame parent
-        while target_widget and not isinstance(target_widget, GroupOfTaks):
+        while target_widget and not isinstance(target_widget, ListOfTaks):
             target_widget = target_widget.parentWidget()
 
-        if isinstance(target_widget, GroupOfTaks) and target_widget != source_widget:
+        if isinstance(target_widget, ListOfTaks) and target_widget != source_widget:
             # Swap the source and target widgets
             source_index = self.layout.indexOf(source_widget)
             target_index = self.layout.indexOf(target_widget)
@@ -637,7 +735,7 @@ class CentralWidget(QWidget):
         widgets = []
         for i in range(self.layout.count()):
             widget = self.layout.itemAt(i).widget()
-            if isinstance(widget, GroupOfTaks):
+            if isinstance(widget, ListOfTaks):
                 widgets.append(widget)
 
         # Clear the layout
@@ -657,45 +755,45 @@ class CentralWidget(QWidget):
                 self.current_row += 1
 
     # Delete all GroupOfTaks in the central widget
-    def delete_all_groups(self):
-        for group_frame in self.findChildren(GroupOfTaks):
-            group_frame.delete_group()  
+    def delete_all_lists(self):
+        for list_frame in self.findChildren(ListOfTaks):
+            list_frame.delete_list()  
         self.update_grid_layout()
 
     # Save all GroupOfTaks and tasks inside them to a file
-    def export_groups(self):
-        groups_data = []
+    def export_lists(self):
+        lists_data = []
 
-        for group_frame in self.findChildren(GroupOfTaks):
-            group_name = group_frame.group_name
+        for list_frame in self.findChildren(ListOfTaks):
+            list_name = list_frame.list_name
             tasks = []
 
-            for task_widget in group_frame.task_container.findChildren(TaskWidget):
+            for task_widget in list_frame.task_container.findChildren(TaskWidget):
                 task_data = {
-                    "task_name": task_widget.label.text(),
-                    "task_checked": task_widget.checkbox.isChecked()
+                    "name": task_widget.label.text(),
+                    "checked": task_widget.checkbox.isChecked()
                 }
                 tasks.append(task_data)
 
-            groups_data.append({
-                "group_name": group_name,
+            lists_data.append({
+                "group_name": list_name,
                 "tasks": tasks
             })
 
-        return groups_data
+        return lists_data
     
     # Load all GroupOfTaks and tasks inside them from a file
-    def import_groups(self, groups_data):
-        self.delete_all_groups()  # Clear existing groups first
-        for group_data in groups_data:
-            group_name = group_data["group_name"]
-            group_frame = self.add_group(group_name, True)
+    def import_lists(self, lists_data):
+        self.delete_all_lists()  # Clear existing groups first
+        for list in lists_data.lists:
+            list_name = list.name
+            list_frame = self.add_list(list_name, True)
 
-            for task_data in group_data["tasks"]:
-                task_name = task_data["task_name"]
-                task_checked = task_data["task_checked"]
+            for task in list.tasks:
+                task_name = task.name
+                task_checked = task.checked
                 # Add task to the group
-                group_frame.task_container.add_task(task_name, task_checked)
+                list_frame.task_container.add_task(task_name, task_checked)
         self.update_grid_layout()
 
 
@@ -817,4 +915,17 @@ def setup_main_window(root, settings, group_data):
     # Additional UI components like buttons, and load the group data
     central_layout = root.central_widget
     root.initUI(central_layout)
-    central_layout.import_groups(group_data)
+  #  central_layout.import_groups(group_data)
+
+    active_lists = root.top_toolbar.group_selector.load_and_activate_lists(group_data)
+    central_layout.import_lists(active_lists)
+
+   # active_group = root.top_toolbar.group_selector.populate_and_get_active_group(group_data)
+   # populate_and_get_active_group(groups_data):
+
+   # Populate the group selector with group data
+    #populate_group_selector(root.top_toolbar, groups_data)
+
+    # Identify and load the active group into the central widget
+    #active_group = get_active_group(groups_data)
+   # load_active_group_into_central_widget(central_layout, active_group)
