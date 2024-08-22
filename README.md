@@ -10,7 +10,7 @@ A heap map of ativities to track daily routine and gamify the process (separate 
 - **Dragable tasks**: dragable tasks inside a group (should let tasks be moved between diferent groups?)
 - **resizzeable groups**: now we can resize groups :) 
 - **structure list**: added a new folder to put structure used in a reduced testing version so its easier to implement on other functions  
-- **[INPROGRESS]** **List of groups**: how should i name this? basic functionality and custom frame added, options adjusted but havent been properly implemented  
+- **List of groups**: how should i name this? basic functionality and custom frame added, options adjusted but havent been properly implemented  
 - **rename groups**: rename the group (this should not be added for tasks since they are the end point but maybe in a future release?  
 - **groups and subtasks**: working flawless groups and subtasks, adds and swaps (v3) - Missing subtasks swap, bind the move group only on its title?  
 - **[TODO]** **DBCONNECTION**: placeholder  
