@@ -1,5 +1,5 @@
 import json
-import os
+import uuid
 import logging
 from PySide6.QtCore import Qt
 #from typing import List
@@ -63,13 +63,12 @@ class List:
         return f"List(name={self.name}, position={self.position}, tasks={self.tasks})"
     
 class Group:
-    def __init__(self, group_id, name, active=False):
-        self.group_id = group_id
+    def __init__(self, name, group_id=None):
+        self.group_id = uuid.uuid4() if group_id is None else group_id # Generate a unique identifier if its a new group
         self.name = name
-        self.active = active
         self.lists = []
 
-    def set_active(self, active=True):
+    def set_activeness(self, active=True):
         self.active = active
     
     def update_lists(self, new_lists):
@@ -80,7 +79,7 @@ class Group:
 
     def to_dict(self):
         return {
-            "group_id": self.group_id,
+            "group_id": str(self.group_id),
             "name": self.name,
             "active": self.active,
             "lists": [list_obj.to_dict() for list_obj in self.lists]
@@ -93,8 +92,8 @@ class Group:
         return obj
 
     @classmethod
-    def populate_group(cls, group_data, group_id, group_name, active=False):
-        group_instance = cls(group_id=group_id, name=group_name, active=active)
+    def populate_group(cls, group_data, group_id, group_name):
+        group_instance = cls(group_id=group_id, name=group_name)
 
         for list_data in group_data:
             list_name = list_data["group_name"]
@@ -115,22 +114,39 @@ class Group:
 class UserGroupsData:
     def __init__(self):
         self.groups = []
+        self.active_group_id = None # Track the UUID of the active group
 
     # Add a new group to the group manager
     def add_group(self, group):
         self.groups.append(group)
+        if len(self.groups) == 1:  # First group is automatically active
+            self.set_group_active(group.group_id)
+
+    # Create a new group to the group manager
+    def create_group(self, group_name):
+        new_group = Group(name=group_name)
+        self.groups.append(new_group)
+        self.active_group_id = new_group.group_id
+
 
     # Remove a group from the group manager
     #def remove_group(self, group_id):
      #   self.groups = [group for group in self.groups if group.group_id != group_id]
     def remove_group(self, group):
         try:
+            if group.group_id == self.active_group_id:
+                self.set_next_active_group()
             self.groups.remove(group)
             logging.debug(f"Group {group.name} removed from the group manager.")
         except ValueError:
             logging.error(f"Group {group.name} not found in the group manager.")
 
-
+    def set_next_active_group(self):
+        if self.groups:
+            self.set_group_active(self.groups[0].group_id)
+        else:
+            logging.info("No groups available to set as active.")
+            self.active_group_id = None
 
 
 
@@ -154,14 +170,16 @@ class UserGroupsData:
             group.update_lists(new_lists)
 
     def set_group_inactive(self, group_id):
-            group = self.find_group_by_id(group_id)
-            if group:
-                group.set_active(False)
+        group = self.find_group_by_id(group_id)
+        if group:
+            group.set_active(False)
 
     def set_group_active(self, group_id):
-        group = self.get_group_by_id(group_id)
-        if group:
-            group.set_active(True)
+        for group in self.groups:
+            group.active = (group.group_id == group_id)
+            if group.active:
+                self.active_group_id = group_id
+                logging.info(f"Group '{group.name}' is now active.")
 
     def find_group_by_id(self, group_id):
         for group in self.groups:
@@ -183,7 +201,12 @@ class UserGroupsData:
         return None
     
 
-
+    def create_initial_group(self):
+        # Ensure at least one group exists
+        if not self.groups:
+            default_group = Group(name="Default Group")
+            self.groups.append(default_group)
+            self.set_group_active(default_group.group_id)
 
     # Save the group data to a file
     def save_to_file(self, file_path=GROUPS_TASKS_FILE):
@@ -196,7 +219,8 @@ class UserGroupsData:
 
     def to_dict(self):
         return {
-            "groups": [group.to_dict() for group in self.groups]
+            "groups": [group.to_dict() for group in self.groups],
+             "active_group_id": str(self.active_group_id)  # Save active group UUID as a string
         }
     
     # Load groups, Lists and tasks from a file
@@ -205,28 +229,24 @@ class UserGroupsData:
             with open(file_path, 'r') as file:
                 data = json.load(file)
                 self.groups = [Group.from_dict(group) for group in data.get('groups', [])]
+                self.active_group_id = data.get('active_group_id')
+                self.set_group_active(self.active_group_id)
                 logging.debug(f"UserGroupsData loaded successfully from {file_path}.")
         except FileNotFoundError:
             logging.warning(f"File not found: {file_path}. Returning a new UserGroupsData instance.")
+            self.groups = []  # Start with an empty list of groups
+            self.active_group_id = None
         except Exception as e:
             logging.error(f"Error loading UserGroupsData: {str(e)}")
+            self.groups = []  # Start with an empty list of groups
+            self.active_group_id = None
 
     # Debug: Print the groups and tasks in the group manager by default
     def __repr__(self):
         return f"UserGroupData(groups={self.groups})"
     
 
-    #def save_user_group_data(file_path, user_group_data):
-   # with open(file_path, 'w') as file:
-    #    json.dump(user_group_data.to_dict(), file, indent=4)
 
-    #def load_user_group_data(file_path):
-    #with open(file_path, 'r') as file:
-   #     data = json.load(file)
-   # return UserGroupData.from_dict(data)
-
-# Example of using GroupManager
-#group_manager = UserGroupsData()
 
 """
 USER_GROUP_DATA = {

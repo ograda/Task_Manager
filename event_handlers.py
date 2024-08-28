@@ -14,12 +14,14 @@ def close_event_handler(event, root, settings, groups_data, current_group):
         event.accept()
 
 
-def manage_add_group_data(root, groups_manager):
-    groups_data = root.top_toolbar.group_selector
-    removed_id, new_id = groups_data.add_new_group()
-    new_lists = remove_group_data(removed_id, new_id, group_manager)
-    print(new_lists, flush=True)  
-    root.central_widget.import_lists(new_lists)
+def manage_add_group_data(root, groups_data):
+    group_selector = root.top_toolbar.group_selector
+    if group_selector.add_new_group(groups_data) != None:
+        #groups_data.add_new_group()
+        new_lists = group_selector.load_and_activate_lists(groups_data)
+        print(new_lists, flush=True)  
+        root.central_widget.import_lists(new_lists)
+
 
 
 

@@ -474,39 +474,28 @@ class CustomComboBox(QComboBox):
         # Return the information
         return current_index, current_text, current_data
 
+
+
+
     def addItem(self, group_name, uid=None):
         if uid is None:
+            logging.error("UID not provided for the group. Generating a new UID. THIS SHOULD NOT HAPPEN IN PRODUCTION.")
             uid = str(uuid.uuid4())  # Generate a UID if not provided
 
         super().addItem(group_name)  # Call the base class method to add the item
         self.setItemData(self.count() - 1, uid)  # Store the UID as item data
         if self.count() == 1:
             self.previous_index = self.currentIndex()  # Initialize the previous index
-        return uid  # Optionally return the UID if you need it elsewhere  
 
-    def add_new_group(self):
+
+    def add_new_group(self, groups_data):
         new_group_name, ok = QInputDialog.getText(self, "Add Group", "Enter new group name:")
         if ok and new_group_name:
-            #lastID = self.currentIndex();
-            self.addItem(new_group_name, None) 
+            groups_data.create_group(new_group_name)
+            return 1
         return None
 
-  #  def add_group(self):
-   #     new_group_name, ok = QInputDialog.getText(self, "Add Group", "Enter new group name:")
-   #     if ok and new_group_name:
-   #         self.addItem(new_group_name)
 
-    #def add_group(self, group_name):
-        # Add the group to the group manager
-      #  new_group_id = group_manager.add_group(group_name)
-
-        # Add the new group to the ComboBox and select it
-      #  self.addItem(group_name, new_group_id)
-      #  new_index = self.count() - 1
-      #  self.setCurrentIndex(new_index)
-
-        # Trigger a swap to save the current state and load the new group
-      #  self.handle_group_swap(new_index)
 
     def remove_selected_group(self):
         current_index = self.currentIndex()
@@ -517,7 +506,7 @@ class CustomComboBox(QComboBox):
             # Remove the item from the ComboBox
             self.removeItem(current_index)
 
-            new_group_id = current_index - 1
+            new_group_id = self.itemData(self.currentIndex())
             return removed_group_id, new_group_id
 
     """
@@ -573,7 +562,33 @@ class CustomComboBox(QComboBox):
       #  for group in groups_data["groups"]:
        #     top_toolbar.group_selector.addItem(group["name"], group["group_id"]) 
 
+    def load_and_activate_lists(self, groups_data):
+        self.clear()  # Clear any existing items
 
+        if not groups_data.groups:
+            groups_data.create_initial_group()
+
+        # Load groups into the combo box
+        for index, group in enumerate(groups_data.groups):
+            self.addItem(group.name, group.group_id)
+
+            # Check if this group is the active group
+            if group.group_id == groups_data.active_group_id:
+                self.setCurrentIndex(index)  # Set the combo box to the active group
+
+        # Return the active group
+        active_group = groups_data.find_group_by_id(groups_data.active_group_id)
+        
+        if not active_group and self.count() > 0:
+            logging.warning(f"No active group found after loading. Defaulting to first group.")
+            # If no group is marked as active, set and return the first group if available
+            self.setCurrentIndex(0)
+            active_group = groups_data.groups[0]
+            groups_data.set_group_active(active_group.group_id)
+        
+        return active_group
+
+    """  
     #  Load/Reload lists and return the active group
     def load_and_activate_lists(self, groups_data):
         self.clear()  # Clear any existing items
@@ -592,7 +607,7 @@ class CustomComboBox(QComboBox):
             active_group = groups_data.groups[active_index] if active_index != -1 else None
 
         return active_group
-
+    """
 
     #manage the lists -- create list, delete list, rename list 
     def showContextMenu(self, position):
@@ -846,7 +861,10 @@ class CentralWidget(QWidget):
     
     # Load all GroupOfTaks and tasks inside them from a file
     def import_lists(self, lists_data):
-        self.delete_all_lists()  # Clear existing groups first
+        self.delete_all_lists()  # Clear existing groups first (self.clear?)
+
+        logging.debug("Start creating the imported lists.")
+        logging.debug(lists_data)
         for list in lists_data.lists:
             list_name = list.name
             list_frame = self.add_list(list_name, True)
@@ -978,9 +996,15 @@ def setup_main_window(root, settings, group_data):
     central_layout = root.central_widget
     root.initUI(central_layout)
   #  central_layout.import_groups(group_data)
-
-    active_list = root.top_toolbar.group_selector.load_and_activate_lists(group_data)
-    central_layout.import_lists(active_list)
+    logging.debug("Prio to active group, debugging group data.")
+    logging.debug(group_data)
+    active_group = root.top_toolbar.group_selector.load_and_activate_lists(group_data)
+    logging.debug("after active group, debugging active group.")
+    logging.debug(active_group)
+    active_list = active_group.lists if active_group.lists else []
+    logging.debug("returned active list.")
+    logging.debug(active_list)
+    central_layout.import_lists(active_group)
 
    # active_group = root.top_toolbar.group_selector.populate_and_get_active_group(group_data)
    # populate_and_get_active_group(groups_data):

@@ -4,12 +4,12 @@ from logging.handlers import RotatingFileHandler
 from PySide6.QtWidgets import QApplication
 from config import UserGroupsData, load_settings, save_groups_and_tasks, swap_groups_and_tasks, remove_group_data
 from ui_components import TaskManagerMainWindow, setup_main_window
-from event_handlers import close_event_handler, open_calendar, open_settings
+from event_handlers import close_event_handler, open_calendar, open_settings, manage_add_group_data
 
 
-def manage_groups_add_data(root, groups_data, group_manager):
+#def manage_groups_add_data(root, groups_data, group_manager):
     #removed_id, new_id = 
-    groups_data.add_new_group()
+  #  groups_data.add_new_group()
    # new_lists = remove_group_data(removed_id, new_id, group_manager)
    # print(new_lists, flush=True)  
    # root.central_widget.import_lists(new_lists)
@@ -48,7 +48,7 @@ def connect_event_handlers(root, settings, groups_data):
     # Connect the group selector to the group manager
     root.top_toolbar.group_selector.currentIndexChanged.connect(lambda: manage_groups_swap_data(root, root.top_toolbar.group_selector, root.central_widget.export_lists(), groups_data))
     root.top_toolbar.group_selector.remove_group_menu.triggered.connect(lambda: manage_groups_delete_data(root, root.top_toolbar.group_selector, groups_data))
-    root.top_toolbar.group_selector.add_group_menu.triggered.connect(lambda: manage_groups_add_data(root, root.top_toolbar.group_selector, groups_data))
+    root.top_toolbar.group_selector.add_group_menu.triggered.connect(lambda: manage_add_group_data(root, groups_data))
 
         #    remove_group.triggered.connect(self.remove_selected_group)
 
