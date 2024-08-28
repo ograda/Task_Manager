@@ -3,7 +3,7 @@ from PySide6.QtGui import QAction, QIcon, QLinearGradient, QPainter, QColor, QDr
 from PySide6.QtCore import Qt,QPoint, QMimeData, QSize, QEvent
 from utils import get_icon_path
 import uuid
-
+import logging
 
 # Define the task widget and its properties
 class TaskWidget(QFrame):
@@ -369,6 +369,10 @@ class CustomComboBox(QComboBox):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.previous_index = self.currentIndex()  # Initialize the previous index
+        self.remove_group_menu = QAction("Remove Group", self)
+        self.add_group_menu = QAction("Create Group", self)
+        self.rename_group_menu = QAction("Rename Group", self)
+
         self.setStyleSheet("""
             QComboBox {
                 padding: 2px;                   /* Padding inside the combo box */
@@ -478,17 +482,77 @@ class CustomComboBox(QComboBox):
         self.setItemData(self.count() - 1, uid)  # Store the UID as item data
         if self.count() == 1:
             self.previous_index = self.currentIndex()  # Initialize the previous index
-        return uid  # Optionally return the UID if you need it elsewhere   
+        return uid  # Optionally return the UID if you need it elsewhere  
 
-    def add_group(self):
+    def add_new_group(self):
         new_group_name, ok = QInputDialog.getText(self, "Add Group", "Enter new group name:")
         if ok and new_group_name:
-            self.addItem(new_group_name)
+            #lastID = self.currentIndex();
+            self.addItem(new_group_name, None) 
+        return None
+
+  #  def add_group(self):
+   #     new_group_name, ok = QInputDialog.getText(self, "Add Group", "Enter new group name:")
+   #     if ok and new_group_name:
+   #         self.addItem(new_group_name)
+
+    #def add_group(self, group_name):
+        # Add the group to the group manager
+      #  new_group_id = group_manager.add_group(group_name)
+
+        # Add the new group to the ComboBox and select it
+      #  self.addItem(group_name, new_group_id)
+      #  new_index = self.count() - 1
+      #  self.setCurrentIndex(new_index)
+
+        # Trigger a swap to save the current state and load the new group
+      #  self.handle_group_swap(new_index)
 
     def remove_selected_group(self):
         current_index = self.currentIndex()
         if current_index >= 0:
+            # Get the group ID before removing
+            removed_group_id = self.itemData(current_index)
+
+            # Remove the item from the ComboBox
             self.removeItem(current_index)
+
+            new_group_id = current_index - 1
+            return removed_group_id, new_group_id
+
+    """
+    def remove_selected_group(self):
+        current_index = self.currentIndex()
+        if current_index >= 0:
+            # Get the group ID before removing
+            removed_group_id = self.itemData(current_index)
+
+            # Remove the item from the ComboBox
+            self.removeItem(current_index)
+
+            # Update the group manager to remove the group
+            group_manager.remove_group(removed_group_id)
+
+            # Adjust the indices of the remaining groups
+            for i in range(current_index, self.count()):
+                group_id = self.itemData(i)
+                group_manager.update_group_id(group_id, i)
+
+            # Load the new selected group (if any)
+            if self.count() > 0:
+                new_index = max(0, current_index - 1)
+                self.setCurrentIndex(new_index)
+                new_group = group_manager.groups[new_index]
+                root.central_widget.import_lists(new_group.lists)
+            else:
+                # No groups left, clear the UI
+                root.central_widget.delete_all_lists()
+    """
+
+    #def remove_selected_group(self):
+      #  current_index = self.currentIndex()
+      #  if current_index >= 0:
+      #      self.removeItem(current_index)
 
     def rename_selected_group(self):
         current_index = self.currentIndex()
@@ -509,6 +573,8 @@ class CustomComboBox(QComboBox):
       #  for group in groups_data["groups"]:
        #     top_toolbar.group_selector.addItem(group["name"], group["group_id"]) 
 
+
+    #  Load/Reload lists and return the active group
     def load_and_activate_lists(self, groups_data):
         self.clear()  # Clear any existing items
         active_group = None
@@ -521,28 +587,24 @@ class CustomComboBox(QComboBox):
 
         # If no group is marked as active, return the group associated with the current index
         if not active_group:
+            logging.warning(f"We don't have an active group after loading groups.")
             active_index = self.currentIndex()
             active_group = groups_data.groups[active_index] if active_index != -1 else None
 
         return active_group
 
+
     #manage the lists -- create list, delete list, rename list 
     def showContextMenu(self, position):
         menu = QMenu(self)
+        menu.addAction(self.add_group_menu)
 
-        add_group = QAction("Create Group", self)
-        add_group.triggered.connect(self.add_group)
-        menu.addAction(add_group)
-
-        rename_group = QAction("Rename Group", self)
-        rename_group.triggered.connect(self.rename_selected_group)
-        menu.addAction(rename_group)
+        self.rename_group_menu.triggered.connect(self.rename_selected_group)
+        menu.addAction(self.rename_group_menu)
 
         # Should we let the user delete the last group?
         if self.count() > 1:
-            remove_group = QAction("Remove Group", self)
-            remove_group.triggered.connect(self.remove_selected_group)
-            menu.addAction(remove_group)
+            menu.addAction(self.remove_group_menu)
 
         # Show the context menu at the position of the right-click
         menu.exec(self.mapToGlobal(position))
@@ -917,8 +979,8 @@ def setup_main_window(root, settings, group_data):
     root.initUI(central_layout)
   #  central_layout.import_groups(group_data)
 
-    active_lists = root.top_toolbar.group_selector.load_and_activate_lists(group_data)
-    central_layout.import_lists(active_lists)
+    active_list = root.top_toolbar.group_selector.load_and_activate_lists(group_data)
+    central_layout.import_lists(active_list)
 
    # active_group = root.top_toolbar.group_selector.populate_and_get_active_group(group_data)
    # populate_and_get_active_group(groups_data):

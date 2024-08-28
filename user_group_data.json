@@ -2,45 +2,20 @@
     "groups": [
         {
             "group_id": 0,
-            "name": "Novo",
-            "active": true,
+            "name": "tef",
+            "active": false,
             "lists": []
         },
         {
             "group_id": 1,
-            "name": "tef",
+            "name": "bcv",
             "active": false,
-            "lists": [
-                {
-                    "name": "Unnamed List",
-                    "position": 0,
-                    "tasks": [
-                        {
-                            "name": "rarara",
-                            "checked": false
-                        },
-                        {
-                            "name": "vcxcvb",
-                            "checked": false
-                        }
-                    ]
-                },
-                {
-                    "name": "Unnamed List",
-                    "position": 0,
-                    "tasks": [
-                        {
-                            "name": "hnbcvnbvger",
-                            "checked": true
-                        }
-                    ]
-                }
-            ]
+            "lists": []
         },
         {
             "group_id": 2,
-            "name": "erc",
-            "active": false,
+            "name": "bcv",
+            "active": true,
             "lists": [
                 {
                     "name": "Unnamed List",
@@ -48,7 +23,7 @@
                     "tasks": [
                         {
                             "name": "rwahbv",
-                            "checked": false
+                            "checked": true
                         },
                         {
                             "name": "cxc",

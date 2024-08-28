@@ -1,12 +1,11 @@
 import json
 import os
+import logging
 from PySide6.QtCore import Qt
 #from typing import List
 
 SETTINGS_FILE = "user_config.json"
-GROUPS_TASKS_FILE = "groups_tasks.json"
-#USER_GROUP_DATA: List[GroupData] = []
-USER_GROUP_DATA = []
+GROUPS_TASKS_FILE = "user_group_data.json"
 
 
 class Task:
@@ -117,6 +116,24 @@ class UserGroupsData:
     def __init__(self):
         self.groups = []
 
+    # Add a new group to the group manager
+    def add_group(self, group):
+        self.groups.append(group)
+
+    # Remove a group from the group manager
+    #def remove_group(self, group_id):
+     #   self.groups = [group for group in self.groups if group.group_id != group_id]
+    def remove_group(self, group):
+        try:
+            self.groups.remove(group)
+            logging.debug(f"Group {group.name} removed from the group manager.")
+        except ValueError:
+            logging.error(f"Group {group.name} not found in the group manager.")
+
+
+
+
+
     def add_or_update_group(self, new_group):
         # Check if the group with the same ID already exists
         for idx, group in enumerate(self.groups):
@@ -152,26 +169,49 @@ class UserGroupsData:
                 return group
         return None
 
-    def add_group(self, group):
-        self.groups.append(group)
+
+    def update_group_id(self, old_group_id, new_group_id):
+        for group in self.groups:
+            if group.group_id == old_group_id:
+                group.group_id = new_group_id
+                break
 
     def get_active_group(self):
         for group in self.groups:
             if group.active:
                 return group
         return None
+    
+
+
+
+    # Save the group data to a file
+    def save_to_file(self, file_path=GROUPS_TASKS_FILE):
+        try:
+            with open(file_path, 'w') as file:
+                json.dump(self.to_dict(), file)
+            logging.debug(f"UserGroupsData saved successfully to {file_path}.")
+        except Exception as e:
+            logging.critical(f"Error saving UserGroupsData: {str(e)}")
 
     def to_dict(self):
         return {
             "groups": [group.to_dict() for group in self.groups]
         }
+    
+    # Load groups, Lists and tasks from a file
+    def load_from_file(self, file_path=GROUPS_TASKS_FILE):
+        try:
+            with open(file_path, 'r') as file:
+                data = json.load(file)
+                self.groups = [Group.from_dict(group) for group in data.get('groups', [])]
+                logging.debug(f"UserGroupsData loaded successfully from {file_path}.")
+        except FileNotFoundError:
+            logging.warning(f"File not found: {file_path}. Returning a new UserGroupsData instance.")
+        except Exception as e:
+            logging.error(f"Error loading UserGroupsData: {str(e)}")
 
-    @classmethod
-    def from_dict(cls, data):
-        obj = cls()
-        obj.groups = [Group.from_dict(group) for group in data["groups"]]
-        return obj
-
+    # Debug: Print the groups and tasks in the group manager by default
     def __repr__(self):
         return f"UserGroupData(groups={self.groups})"
     
@@ -186,7 +226,7 @@ class UserGroupsData:
    # return UserGroupData.from_dict(data)
 
 # Example of using GroupManager
-group_manager = UserGroupsData()
+#group_manager = UserGroupsData()
 
 """
 USER_GROUP_DATA = {
@@ -222,9 +262,6 @@ USER_GROUP_DATA = {
 }
 """
 
-def fetch_group_data():
-    print(USER_GROUP_DATA, flush=True)
-    return USER_GROUP_DATA
 
 """
 def swap_groups_and_tasks(old_index, new_index, current_tasks):
@@ -246,7 +283,24 @@ def swap_groups_and_tasks(old_index, new_index, current_tasks):
     return new_group.lists
 """
 
-def swap_groups_and_tasks(old_index, new_index, current_tasks):
+
+
+# remove one group from the group_manager
+def remove_group_data(removed_group_id, current_index, group_manager):
+    group_manager.remove_group(removed_group_id)
+
+    # Adjust the indices of the remaining groups
+    for i in range(current_index, len(group_manager.groups)):
+        group_manager.groups[i].group_id = i
+
+    if current_index >= 0:
+        new_index = max(0, current_index - 1)
+        new_group = group_manager.groups[new_index]
+        return new_group
+    else:
+        return None
+
+def swap_groups_and_tasks(old_index, new_index, current_tasks, group_manager):
     # Debug: Print the indices and the current state of the groups
     print(f"Attempting to swap groups. Old index: {old_index}, New index: {new_index}", flush=True)
     
@@ -283,6 +337,8 @@ def swap_groups_and_tasks(old_index, new_index, current_tasks):
         print(f"IndexError occurred: {str(e)}. Check the indices and the list size.", flush=True)
         return None
     
+
+
 # save_user_group_data('user_group_data.json', user_group_data)
 def save_user_group_data(file_path, user_group_data):
     with open(file_path, 'w') as file:
@@ -297,28 +353,7 @@ def save_user_group_data(file_path, user_group_data):
     #with open(file_path, 'r') as file:
        # return UserGroupsData.from_dict(json.load(file))
     
-# In the config.py or wherever you're loading the group data
-def load_user_group_data(file_path):
-    try:
-        with open(file_path, 'r') as file:
-            data = json.load(file)
-            user_group_data = UserGroupsData.from_dict(data)
-            
-            # Debug: Print the loaded groups
-            print("Loaded groups from file:")
-            for group in user_group_data.groups:
-                print(f"Group ID: {group.group_id}, Name: {group.name}, Active: {group.active}")
-            
-            return user_group_data
-    except FileNotFoundError:
-        print(f"File not found: {file_path}. Starting with empty group data.")
-        return UserGroupsData()  # Return an empty UserGroupsData if file not found
-    except Exception as e:
-        print(f"Error loading group data: {str(e)}")
-        return UserGroupsData()  # Return empty if there's any error
-
-
-def save_groups_and_tasks(lists_data, current_group): #export_all_groups_data
+def save_groups_and_tasks(lists_data, current_group, group_manager): #export_all_groups_data
     for group_info in current_group:
         current_id = group_info["group_id"]
         current_name = group_info["name"]
@@ -360,45 +395,56 @@ def save_groups_and_tasks(lists_data, current_group): #export_all_groups_data
   #  print("post print groups and tasks...", flush=True)
    # save_groups_file()
 
-def load_groups_and_tasks():
-    global group_manager
-    group_manager = load_user_group_data('user_group_data.json')
-    print("Groups in group_manager after loading:")
-    for idx, group in enumerate(group_manager.groups):
-        print(f"Index: {idx}, Group ID: {group.group_id}, Name: {group.name}, Active: {group.active}")
-    # Print the loaded data to verify it's the same
-    print(group_manager.to_dict(), flush=True)
-    USER_GROUP_DATA = load_groups_file()
-    return group_manager
 
-def save_groups_file():
-    with open(GROUPS_TASKS_FILE, "w") as file:
-        json.dump(USER_GROUP_DATA, file)
 
-def load_groups_file():
-    if os.path.exists(GROUPS_TASKS_FILE):
-        with open(GROUPS_TASKS_FILE, "r") as file:
-            try:
-                return json.load(file)
-            except json.JSONDecodeError:
-                print("Warning: JSON file is empty or corrupted. Starting with an empty task list.", flush=True)
-                return []  # Return an empty list if the file is empty or corrupted
-    return []  # Return an empty list if the file doesn't exist
+
 
 
 """
-def load_groups_and_tasks():
-    if os.path.exists(GROUPS_TASKS_FILE):
-        with open(GROUPS_TASKS_FILE, "r") as file:
-            try:
-                return json.load(file)
-            except json.JSONDecodeError:
-                print("Warning: JSON file is empty or corrupted. Starting with an empty task list.", flush=True)
-                return []  # Return an empty list if the file is empty or corrupted
-    return []  # Return an empty list if the file doesn't exist
+# Load groups, Lists and tasks from a file
+def fetch_groups_data(user_group_data):
+    user_group_data.load_from_file(GROUPS_TASKS_FILE)
+    
+    # Print the loaded data to verify if its loading correctly
+    if logging.getLogger().isEnabledFor(logging.DEBUG):
+        logging.debug("Groups in group_manager after loading:")
+        for idx, group in enumerate(user_group_data.groups):
+            logging.debug(f"Index: {idx}, Group ID: {group.group_id}, Name: {group.name}, Active: {group.active}")
+        logging.debug(user_group_data.to_dict())
+    return user_group_data
+
+# In the config.py or wherever you're loading the group data
+def load_groups_file(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            user_group_data = UserGroupsData.from_dict(data)
+            logging.debug("Loadeing groups from file")
+            return user_group_data
+    except FileNotFoundError:
+        logging.warning(f"File not found: {file_path}. Starting with empty group data.")
+    except Exception as e:
+        logging.error(f"Error loading group data: {str(e)}")
+    return UserGroupsData()  # Return empty if there's any error
 """
+# Save user group data to a file
+def save_groups_file(user_group_data):
+    try:
+        with open(GROUPS_TASKS_FILE, "w") as file:
+            json.dump(user_group_data, file)
+        logging.debug("User group data saved successfully.")
+    except Exception as e:
+        logging.critical(f"Error saving group data: {str(e)}")
+
+
+############################################################################################################################################################################
+############################################################################################################################################################################
+######################################        SAVES AND LOADS SETTINGS FOR THE WINDOW AND GROUPS AND TASKS        ##########################################################
+############################################################################################################################################################################
+############################################################################################################################################################################
 
 # Create default settings for our program, assuming that we don't or partially have default settings in SETTINGS_FILE
+# This is a definition function, move elsewhere?
 def get_default_settings():
     return {
         "always_on_top": False,
@@ -408,6 +454,7 @@ def get_default_settings():
         "window_position": "100x100", 
     }
 
+#OGRADA should we handle this better?
 # Execute the save settings function with the current settings of the window
 def save_current_settings(root, current_settings):
     settings = {
@@ -422,13 +469,21 @@ def save_current_settings(root, current_settings):
 # Load the settings from the file if it exists, otherwise return the default settings
 def load_settings():
     settings = get_default_settings() # Get the default settings pattern
-    if os.path.exists(SETTINGS_FILE):
+    try:
         with open(SETTINGS_FILE, "r") as file:
             loaded_settings = json.load(file)
             settings = {**settings, **loaded_settings} # Merge loaded settings with defaults
-    return settings
+    except FileNotFoundError:
+        logging.warning(f"File not found: {SETTINGS_FILE}. Starting with default settings.")
+    except Exception as e:
+        logging.error(f"Error loading settings data: {str(e)}")
+    return settings  
 
 # Save the settings to the file
 def save_settings(settings):
-    with open(SETTINGS_FILE, "w") as file:
-        json.dump(settings, file)
+    try:
+        with open(SETTINGS_FILE, "w") as file:
+            json.dump(settings, file)
+            logging.debug("Settings data saved successfully.")
+    except Exception as e:
+        logging.critical(f"Error saving settings: {str(e)}")

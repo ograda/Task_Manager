@@ -13,6 +13,20 @@ def close_event_handler(event, root, settings, groups_data, current_group):
     else:
         event.accept()
 
+
+def manage_add_group_data(root, groups_manager):
+    groups_data = root.top_toolbar.group_selector
+    removed_id, new_id = groups_data.add_new_group()
+    new_lists = remove_group_data(removed_id, new_id, group_manager)
+    print(new_lists, flush=True)  
+    root.central_widget.import_lists(new_lists)
+
+
+
+
+
+
+
 # Handle the "Always on Top" toggle
 def toggle_always_on_top(root, state):
     root.setWindowFlag(Qt.WindowStaysOnTopHint, state)
