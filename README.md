@@ -1,4 +1,4 @@
-# Task Management Application (v0.0.5)
+# Task Management Application (v0.1.0)
 
 This is a simple task management application built using Python and Pyside6.  
 Goal is to be fully functional, calendar and database integration plus a map of tasks completed over time.  
@@ -29,14 +29,37 @@ A heap map of ativities to track daily routine and gamify the process (separate 
 
 ## Known Bugs and TODO functions
 
-- [TESTING] removed group to clear the uid?  
-- [TODO] resize widget too? save the height of frames? 
-- [TODO-DIF REVISION] implement an executable and add on big flag versions (0.0.5 or 1.0.0 ?)  
-- [TODO] Db management and connection -> tasks and groups  
+- [V0.2.0]
 - [WIP] review code and reorganize the functions  
 - [TODO] start recreating the interface with custom icons  
-- [TODO-DIF REVISION] define the minimum size and aspect ratio for the tasks  
+- [PARTIALLY BUGGED] swap lists
+- [PARTIALLY BUGGED] swap tasks
 
+- [V0.5.0]
+- [TODO] add date and priority to tasks
+- [TODO] create a reorganize by prio on lists
+- [TODO] hide completed tasks option
+- [TODO] option on task expiration (show date or time left
+- [TODO] create a task priority identifier, color?
+
+- [V1.0.0]  
+- [TODO] resize widget too? save the height of frames? 
+- [TODO-DIF REVISION] define the minimum size and aspect ratio for the tasks 
+- [TODO-DIF REVISION] implement an executable and add on big flag versions (0.5.0 or 1.0.0 ?) 
+
+- [V2.0.0]  
+- [TODO] Db management and connection -> tasks and groups
+- [TODO] login
+- [TODO] cryptography
+
+- [V3.0.0]  
+- [TODO] calendar management + heap map?
+
+- [V4.0.0]  
+- [TODO] heap map optmize
+
+- [V5.0.0 - final?] 
+- [TODO] add support to integrate external calendars
 
 ## Version Control
 
