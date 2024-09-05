@@ -1,8 +1,7 @@
 import json
 import uuid
 import logging
-
-GROUPS_TASKS_FILE = "user_group_data.json"
+from utils import get_groupsdata_file_path
 
 class Task:
     def __init__(self, name, checked=False):
@@ -49,12 +48,6 @@ class List:
         # Manually assign the tasks
         obj.tasks = [Task.from_dict(task_data) for task_data in data.get("tasks", [])]
         return obj
-    
-    #@classmethod
-   # def from_dict(cls, data):
-   #     obj = cls(name=data["name"], position=data["position"])
-    #    obj.tasks = [Task.from_dict(task) for task in data["tasks"]]
-      #  return obj
 
     def __repr__(self):
         return f"List(name={self.name}, position={self.position}, tasks={self.tasks})"
@@ -173,38 +166,6 @@ class UserGroupsData:
         logging.warning(f"Couldn't find a group with id '{group_id}' in group manager!")
         return None
 
-
-
-
-
-
-    """
-    def add_or_update_group(self, new_group):
-        # Check if the group with the same ID already exists
-        for idx, group in enumerate(self.groups):
-            if group.group_id == new_group.group_id:
-                # Update the existing group
-                self.groups[idx] = new_group
-                print(f"Group {new_group.name} updated.")
-                return
-
-        # If the group doesn't exist, add it
-        self.groups.append(new_group)
-        print(f"Group {new_group.name} added.")
-
-
-    def update_group_data(self, group_id, group_name, new_lists):
-        group = self.find_group_by_id(group_id)
-        if group:
-            group.update_lists(new_lists)
-    """
-
-
- 
-
-
-
-
     # If we don't have any groups in the list, lets make sure we add a starting one.
     def create_initial_group(self):
         if not self.groups:
@@ -213,7 +174,7 @@ class UserGroupsData:
             self.set_active_group(default_group.group_id)
 
     # Save the group data to a file
-    def save_to_file(self, file_path=GROUPS_TASKS_FILE):
+    def save_to_file(self, file_path=get_groupsdata_file_path()):
         try:
             logging.debug(f"Trying to save UserGroupsData to {file_path}:\n" + self.__repr__())
             with open(file_path, 'w') as file:
@@ -230,7 +191,7 @@ class UserGroupsData:
         }
     
     # Load groups, Lists and tasks from a file
-    def load_from_file(self, file_path=GROUPS_TASKS_FILE):
+    def load_from_file(self, file_path=get_groupsdata_file_path()):
         try:
             with open(file_path, 'r') as file:
                 data = json.load(file)

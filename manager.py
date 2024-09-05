@@ -7,7 +7,6 @@ from ui_components import TaskManagerMainWindow, setup_main_window
 from event_handlers import close_event_handler, open_calendar, open_settings, manage_add_group_data, manage_swap_group_data, manage_delete_group_data, manage_rename_group_data
 
 
-
 ################################################################################################################################################################################################
 # Setup event handlers
 def connect_event_handlers(root, settings, groups_data):

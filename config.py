@@ -1,8 +1,7 @@
 import json
 import logging
 from PySide6.QtCore import Qt
-
-SETTINGS_FILE = "user_config.json"
+from utils import get_settings_file_path
 
 ############################################################################################################################################################################
 ############################################################################################################################################################################
@@ -36,13 +35,14 @@ def save_current_settings(root, current_settings):
 # Load the settings from the file if it exists, otherwise return the default settings
 def load_settings():
     settings = get_default_settings() # Get the default settings pattern
+    settings_file = get_settings_file_path() # Get the settings file path
     try:
-        with open(SETTINGS_FILE, "r") as file:
+        with open(settings_file, "r") as file:
             loaded_settings = json.load(file)
             settings = {**settings, **loaded_settings} # Merge loaded settings with defaults
-            logging.debug(f"Loaded settings file successfully from {SETTINGS_FILE}.")
+            logging.debug(f"Loaded settings file successfully from {settings_file}.")
     except FileNotFoundError:
-        logging.warning(f"File not found at: {SETTINGS_FILE}. Starting with default settings.")
+        logging.warning(f"File not found at: {settings_file}. Starting with default settings.")
     except Exception as e:
         logging.critical(f"Error loading settings data: {str(e)}")
     return settings  
@@ -50,8 +50,9 @@ def load_settings():
 # Save the settings to the file
 def save_settings(settings):
     try:
-        with open(SETTINGS_FILE, "w") as file:
+        settings_file = get_settings_file_path()
+        with open(settings_file, "w") as file:
             json.dump(settings, file)
-            logging.debug(f"Settings data saved successfully to {SETTINGS_FILE}.")
+            logging.debug(f"Settings data saved successfully to {settings_file}.")
     except Exception as e:
         logging.critical(f"Error saving settings: {str(e)}")

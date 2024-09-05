@@ -3,7 +3,8 @@ from PySide6.QtCore import Qt
 from tray import minimize_to_tray
 from config import save_current_settings, save_settings
 
-
+################################################################################################################################################################################################
+# Rename group data
 def close_event_handler(event, root, settings, groups_data):
     # Save the current settings and groups/tasks
     save_current_settings(root, settings)

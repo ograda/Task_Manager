@@ -156,6 +156,15 @@ class TaskContainer(QWidget):
         task_widget.deleteLater()
         self.update()  # Update the container to adjust layout
 
+
+    def get_task_widgets(self):
+        task_widgets = []
+        for i in range(self.task_layout.count()):
+            widget = self.task_layout.itemAt(i).widget()
+            if isinstance(widget, TaskWidget):
+                task_widgets.append(widget)
+        return task_widgets
+
     # Manage the drag enter event
     def dragEnterEvent(self, event):
         if event.mimeData().hasText():
@@ -215,7 +224,7 @@ class GradientLabel(QLabel):
         painter.end() 
 
 # create the group frame class with tasks and its functions
-class ListOfTaks(QFrame):
+class ListOfTasks(QFrame):
     def __init__(self, list_name, unique_id, parent=None):
         super().__init__(parent)
         self.setFrameShape(QFrame.Box)
@@ -300,8 +309,8 @@ class ListOfTaks(QFrame):
     def mousePressEvent(self, event):
         clicked_widget = self.childAt(event.pos())
 
-        if isinstance(clicked_widget, TaskWidget):
-            print(f"Forwarding event to TaskWidget: {clicked_widget.uid}", flush=True)
+        if isinstance(clicked_widget, TaskContainer):
+            print(f"Forwarding event to TasContainert: {clicked_widget}", flush=True)
             # Forward the event to the TaskWidget
             clicked_widget.mousePressEvent(event)
         elif event.button() == Qt.LeftButton:
@@ -457,12 +466,6 @@ class CustomComboBox(QComboBox):
                 self.setItemText(current_index, new_group_name)
                 return self.itemData(current_index), new_group_name
 
-
-
-
-
-
- 
     # Handles the process of swapping groups (override the default method)
     def handle_group_swap(self):
         # Get the new group UID using the current index
@@ -634,7 +637,7 @@ class CentralWidget(QWidget):
         # Generate a unique ID for each group
         unique_id = uuid.uuid4()
         # Create a new draggable frame for the group
-        list_frame = ListOfTaks(list_name, unique_id, self)
+        list_frame = ListOfTasks(list_name, unique_id, self)
         # Add the group frame to the grid layout at the current position
         self.layout.addWidget(list_frame, self.current_row, self.current_col)
         # Update column and row for the next widget
@@ -657,23 +660,52 @@ class CentralWidget(QWidget):
             event.ignore()  # Pass the event to the child widget
 
     def dragEnterEvent(self, event):
-        print("Drag parent", flush=True)
-        if event.mimeData().hasText():
-            print("Drag parent two", flush=True)
-            event.acceptProposedAction()
-
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasText():
-            event.acceptProposedAction()
+        print("Centra widget drag ENTER going to ignore", flush=True)
+        event.acceptProposedAction()
+      #  if event.mimeData().hasText():
+         #   event.acceptProposedAction()
 
     #custumize the drag move event (draging groups #OGRADAAAAAAAAAAAAAAAA)
     def dragMoveEvent(self, event):
+     #   print("Centra widget drag MOVE going to ignore", flush=True)
+      #  event.ignore()  # Same for drag mov
        event.acceptProposedAction()
 
+    # Manage drag move event in the central widget
+   # def dragMoveEvent(self, event: QDragMoveEvent):
+        # Get the position where the widget is being dragged over
+      #  drop_position = event.position().toPoint()
+      #  target_widget = self.childAt(drop_position)
+
+        # Log the widget under the cursor
+       # if target_widget:
+      #      logging.debug(f"Dragging over: {target_widget}")
+      #  else:
+      #      logging.debug(f"No valid widget at position: {drop_position}")
+     #       event.ignore()
+      #      return
+
+        # Check if the target is the right type (e.g., a ListOfTaks or another allowed widget)
+    #    if isinstance(target_widget, ListOfTasks):
+     #       logging.debug(f"Valid target for drop: {target_widget}")
+     #       event.accept()  # Allow the drag to continue
+    #        QApplication.setOverrideCursor(Qt.OpenHandCursor)  # Show valid cursor
+     #   else:
+    #        logging.debug(f"Invalid target for drop: {target_widget}")
+    #        event.ignore()  # Block the drag
+     #       QApplication.setOverrideCursor(Qt.ForbiddenCursor)  # Show blocked cursor
+
+
+    #def dropEvent(self, event):
+      #  print("Centra widget DROP event going to ignore", flush=True)
+       # event.ignore()  # Ignore drop events as well
+
+   # """    
     #execute the drag event
     def dropEvent(self, event: QDropEvent):
+        print("Centra widget DROP EVENT TRYING TO DO", flush=True)
         # Find the widget that was dropped using the unique ID
-        source_widget = self.findChild(ListOfTaks, event.mimeData().text())
+        source_widget = self.findChild(ListOfTasks, event.mimeData().text())
         if not source_widget:
             return
 
@@ -681,29 +713,36 @@ class CentralWidget(QWidget):
         drop_position = event.position().toPoint()
         target_widget = self.childAt(drop_position)
 
-        # If the drop target is not a DraggableFrame, find the closest DraggableFrame parent
-        while target_widget and not isinstance(target_widget, ListOfTaks):
+        # If the drop target is not a ListOfTaks, find the closest ListOfTaks parent
+        while target_widget and not isinstance(target_widget, ListOfTasks):
             target_widget = target_widget.parentWidget()
 
-        if isinstance(target_widget, ListOfTaks) and target_widget != source_widget:
-            # Swap the source and target widgets
+        # Ensure that the target widget is valid and different from the source
+        if isinstance(target_widget, ListOfTasks) and target_widget != source_widget:
+            # Get the source and target positions
             source_index = self.layout.indexOf(source_widget)
             target_index = self.layout.indexOf(target_widget)
 
             source_row, source_col, _, _ = self.layout.getItemPosition(source_index)
             target_row, target_col, _, _ = self.layout.getItemPosition(target_index)
 
+            # Swap the widgets in the grid layout
+            self.layout.removeWidget(source_widget)
+            self.layout.removeWidget(target_widget)
+
             self.layout.addWidget(source_widget, target_row, target_col)
             self.layout.addWidget(target_widget, source_row, source_col)
 
+        # Accept the drop event
         event.acceptProposedAction()
+       # """
 
     #update the grid layout (rearrange the grid layout based on the current max_columns setting)
     def update_grid_layout(self):
         widgets = []
         for i in range(self.layout.count()):
             widget = self.layout.itemAt(i).widget()
-            if isinstance(widget, ListOfTaks):
+            if isinstance(widget, ListOfTasks):
                 widgets.append(widget)
 
         # Clear the layout
@@ -724,32 +763,40 @@ class CentralWidget(QWidget):
 
     # Delete all GroupOfTaks in the central widget
     def delete_all_lists(self):
-        for list_frame in self.findChildren(ListOfTaks):
+        for list_frame in self.findChildren(ListOfTasks):
             list_frame.delete_list()  
         self.update_grid_layout()
 
     # Save all GroupOfTaks and tasks inside them to a file
     def export_lists(self):
-        lists_data = []
+        logging.debug("Starting export of lists:")
+        lists_data = []      
+        # Iterate over the grid layout in row-major order to respect the visual order
+        for row in range(self.layout.rowCount()):
+            for col in range(self.layout.columnCount()):
+                item = self.layout.itemAtPosition(row, col)  # Get the widget at (row, col)
+                if item is not None:
+                    list_frame = item.widget()  # Get the widget from the layout item
+                    if isinstance(list_frame, ListOfTasks):
+                        list_name = list_frame.list_name        
+                        list_of_tasks = list_frame.task_container.get_task_widgets()
 
-        for list_frame in self.findChildren(ListOfTaks):
-            list_name = list_frame.list_name
-            tasks = []
+                        tasks = [] 
+                        for task_widget in list_of_tasks:
+                            task_data = {
+                                "name": task_widget.label.text(),
+                                "checked": task_widget.checkbox.isChecked()
+                            }
+                            tasks.append(task_data)
 
-            for task_widget in list_frame.task_container.findChildren(TaskWidget):
-                task_data = {
-                    "name": task_widget.label.text(),
-                    "checked": task_widget.checkbox.isChecked()
-                }
-                tasks.append(task_data)
+                        lists_data.append({
+                            "group_name": list_name,
+                            "tasks": tasks
+                        })
 
-            lists_data.append({
-                "group_name": list_name,
-                "tasks": tasks
-            })
-
+        logging.debug(f"Final exported data: {lists_data}")
         return lists_data
-    
+
     # Load all GroupOfTaks and tasks inside them from a file
     def import_lists(self, lists_data):
         self.delete_all_lists()  # Clear existing groups first (self.clear?)
@@ -765,9 +812,6 @@ class CentralWidget(QWidget):
                 # Add task to the group
                 list_frame.task_container.add_task(task_name, task_checked)
         self.update_grid_layout()
-
-
-
 
 
 #defines the main window
